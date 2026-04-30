@@ -86,18 +86,8 @@ function TrackPage() {
               </div>
               
               <div className="flex justify-between py-2 border-b">
-                <span className="font-semibold">নাম:</span>
-                <span>{application.name || 'N/A'}</span>
-              </div>
-              
-              <div className="flex justify-between py-2 border-b">
                 <span className="font-semibold">সেবার ধরন:</span>
                 <span>{application.service_type || 'N/A'}</span>
-              </div>
-              
-              <div className="flex justify-between py-2 border-b">
-                <span className="font-semibold">জমা দেওয়ার তারিখ:</span>
-                <span>{application.submitted_at ? new Date(application.submitted_at).toLocaleDateString('bn-BD') : 'N/A'}</span>
               </div>
               
               <div className="flex justify-between py-2 border-b items-center">

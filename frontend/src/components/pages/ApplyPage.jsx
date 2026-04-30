@@ -25,7 +25,7 @@ function ApplyPage() {
       setTrackingNumber(response.data.tracking_number);
       toast.success('আবেদন সফল হয়েছে!');
     } catch (error) {
-      toast.error('আবেদন জমা দিতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
+      toast.error('আবেদন জমা দিতে ব্যর্থ হয়েছে');
     } finally {
       setLoading(false);
     }
@@ -96,18 +96,6 @@ function ApplyPage() {
             />
           </div>
 
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2 font-semibold">ইমেইল</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="youremail@example.com"
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600"
-            />
-          </div>
-
           <div className="mb-6">
             <label className="block text-gray-700 mb-2 font-semibold">সেবার ধরন *</label>
             <select
@@ -126,7 +114,7 @@ function ApplyPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-semibold"
           >
             {loading ? 'প্রক্রিয়াধীন...' : 'আবেদন জমা দিন'}
           </button>

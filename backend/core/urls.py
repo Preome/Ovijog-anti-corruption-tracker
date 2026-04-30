@@ -87,6 +87,31 @@ def api_home(request):
             'admin': '/admin/'
         }
     })
+    
+    
+# Add this function before urlpatterns
+def dashboard_stats(request):
+    from applications.models import Application
+    from complaints.models import Complaint
+    
+    total_apps = Application.objects.count()
+    pending_apps = Application.objects.filter(status='submitted').count()
+    approved_apps = Application.objects.filter(status='approved').count()
+    complaints_count = Complaint.objects.count() if hasattr(Complaint, 'objects') else 0
+    
+    return JsonResponse({
+        'total_applications': total_apps,
+        'pending_applications': pending_apps,
+        'approved_applications': approved_apps,
+        'complaints_count': complaints_count,
+        'avg_processing_time': 5.5
+    })
+
+# Add this to urlpatterns
+urlpatterns = [
+    # ... existing urls
+    path('api/dashboard/stats/', dashboard_stats),
+]
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -94,4 +119,6 @@ urlpatterns = [
     path('api/applications/', applications_list),
     path('api/applications/<str:tracking_number>/', application_detail),
     path('api/complaints/', complaints_list),
+    # Add to urlpatterns
+    path('api/auth/', include('users.urls')),
 ]

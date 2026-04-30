@@ -29,7 +29,7 @@ function ComplaintPage() {
       setComplaintId(response.data.complaint_id);
       toast.success('অভিযোগ জমা দেওয়া হয়েছে!');
     } catch (error) {
-      toast.error('অভিযোগ জমা দিতে ব্যর্থ হয়েছে।');
+      toast.error('অভিযোগ জমা দিতে ব্যর্থ হয়েছে');
     } finally {
       setLoading(false);
     }
@@ -101,30 +101,6 @@ function ComplaintPage() {
                 required
                 value={formData.incident_date}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600"
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-gray-700 mb-2 font-semibold">দাবিকৃত অর্থের পরিমাণ (ঐচ্ছিক)</label>
-              <input
-                type="number"
-                name="amount_requested"
-                value={formData.amount_requested}
-                onChange={handleChange}
-                placeholder="টাকায়"
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600"
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-gray-700 mb-2 font-semibold">অফিসারের নাম (ঐচ্ছিক)</label>
-              <input
-                type="text"
-                name="officer_name"
-                value={formData.officer_name}
-                onChange={handleChange}
-                placeholder="যদি জানা থাকে"
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600"
               />
             </div>
