@@ -15,15 +15,31 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        setUser(decoded);
-        API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        // Also get user data from backend to ensure we have role
+        fetchUserData(token);
       } catch (error) {
         console.error('Invalid token:', error);
         logout();
+        setLoading(false);
       }
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
+
+  const fetchUserData = async (token) => {
+    try {
+      API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const response = await API.get('/auth/profile/');
+      setUser(response.data);
+      console.log('User data loaded:', response.data); // Debug log
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      logout();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const register = async (userData) => {
     try {
@@ -35,6 +51,7 @@ export const AuthProvider = ({ children }) => {
       setUser(userDataResponse);
       API.defaults.headers.common['Authorization'] = `Bearer ${access}`;
       
+      console.log('Registered user:', userDataResponse); // Debug log
       return { success: true, user: userDataResponse };
     } catch (error) {
       console.error('Registration error:', error.response?.data);
@@ -55,8 +72,10 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       API.defaults.headers.common['Authorization'] = `Bearer ${access}`;
       
+      console.log('Logged in user:', userData); // Debug log
       return { success: true, user: userData };
     } catch (error) {
+      console.error('Login error:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Login failed' 
