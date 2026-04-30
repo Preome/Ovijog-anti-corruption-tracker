@@ -14,16 +14,15 @@ import ProfilePage from './components/pages/ProfilePage';
 function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
   
-  // Citizen Navigation Items
+  // Citizen Navigation Items (No Dashboard)
   const citizenNavItems = [
     { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
     { path: '/apply', label: 'আবেদন', icon: <FileText className="h-4 w-4" /> },
     { path: '/track', label: 'ট্র্যাক', icon: <Search className="h-4 w-4" /> },
     { path: '/complaint', label: 'অভিযোগ', icon: <AlertTriangle className="h-4 w-4" /> },
-    { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
   ];
   
-  // Officer Navigation Items (No apply, track, complaint)
+  // Officer Navigation Items (With Dashboard)
   const officerNavItems = [
     { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
     { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
@@ -32,7 +31,7 @@ function Navbar() {
   // Get navigation based on role
   const getNavItems = () => {
     if (!isAuthenticated) {
-      return citizenNavItems; // Show limited for non-authenticated
+      return citizenNavItems;
     }
     
     if (user?.role === 'officer' || user?.role === 'admin') {
@@ -212,15 +211,18 @@ function HomePage() {
               </>
             )}
             
-            <Link 
-              to="/dashboard" 
-              className="inline-block bg-purple-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-purple-700 transition"
-            >
-              {user?.role === 'officer' ? 'কর্মকর্তা ড্যাশবোর্ড' : 'আমার ড্যাশবোর্ড'}
-            </Link>
+            {/* Only show Dashboard button for officers/admins */}
+            {isAuthenticated && (user?.role === 'officer' || user?.role === 'admin') && (
+              <Link 
+                to="/dashboard" 
+                className="inline-block bg-purple-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-purple-700 transition"
+              >
+                কর্মকর্তা ড্যাশবোর্ড
+              </Link>
+            )}
           </div>
 
-          {/* Features Section */}
+          {/* Features Section - Visible to everyone */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mt-16">
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="text-blue-600 text-4xl mb-4">📝</div>
@@ -266,7 +268,8 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
   }
   
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/dashboard" replace />;
+    // Citizens trying to access officer routes go to home
+    return <Navigate to="/" replace />;
   }
   
   return children;
@@ -301,12 +304,14 @@ function AppContent() {
             </ProtectedRoute>
           } />
           
-          {/* Both Citizen and Officer Routes */}
+          {/* Officer Only Routes */}
           <Route path="/dashboard" element={
-            <ProtectedRoute allowedRoles={['citizen', 'officer', 'admin']}>
+            <ProtectedRoute allowedRoles={['officer', 'admin']}>
               <Dashboard />
             </ProtectedRoute>
           } />
+          
+          {/* Both Citizen and Officer Routes */}
           <Route path="/profile" element={
             <ProtectedRoute allowedRoles={['citizen', 'officer', 'admin']}>
               <ProfilePage />
