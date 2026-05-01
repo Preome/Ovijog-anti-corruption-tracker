@@ -7,9 +7,8 @@ from datetime import datetime
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-# In-memory storage for complaints and applications
+# In-memory storage for complaints
 complaints_storage = {}
-applications_storage = {}
 
 # Helper function to get user from JWT token
 def get_user_from_request(request):
@@ -24,73 +23,6 @@ def get_user_from_request(request):
         pass
     return None
 
-# API Views
-@csrf_exempt
-@require_http_methods(["GET", "POST"])
-def applications_list(request):
-    if request.method == 'GET':
-        return JsonResponse({
-            'applications': list(applications_storage.values()),
-            'message': 'Applications retrieved'
-        })
-    
-    elif request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            user = get_user_from_request(request)
-            tracking_number = f"TRK-{uuid.uuid4().hex[:8].upper()}"
-            
-            application_data = {
-                'id': str(uuid.uuid4()),
-                'tracking_number': tracking_number,
-                'name': data.get('name'),
-                'phone': data.get('phone'),
-                'email': data.get('email', ''),
-                'service_type': data.get('service_type'),
-                'status': 'submitted',
-                'submitted_at': datetime.now().isoformat(),
-                'expected_completion_date': (datetime.now().replace(day=datetime.now().day + 15)).isoformat(),
-                'user_id': str(user.id) if user else None,
-                'user_name': user.username if user else None
-            }
-            
-            applications_storage[tracking_number] = application_data
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Application submitted successfully',
-                'tracking_number': tracking_number,
-                'status': 'submitted'
-            }, status=201)
-            
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
-
-@csrf_exempt
-def application_detail(request, tracking_number):
-    if request.method == 'GET':
-        app_data = applications_storage.get(tracking_number)
-        if app_data:
-            return JsonResponse(app_data)
-        return JsonResponse({
-            'error': 'Application not found'
-        }, status=404)
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-# Get all applications (for officers)
-@csrf_exempt
-def all_applications(request):
-    user = get_user_from_request(request)
-    
-    if not user:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-    
-    if user.role not in ['officer', 'admin']:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
-    # Return real data from storage only
-    return JsonResponse(list(applications_storage.values()), safe=False)
-
 # Get all complaints (for officers)
 @csrf_exempt
 def all_complaints(request):
@@ -102,7 +34,6 @@ def all_complaints(request):
     if user.role not in ['officer', 'admin']:
         return JsonResponse({'error': 'Unauthorized'}, status=403)
     
-    # Return real complaints from storage only
     return JsonResponse(list(complaints_storage.values()), safe=False)
 
 # Get my complaints (for citizens)
@@ -120,22 +51,6 @@ def my_complaints(request):
             user_complaints.append(complaint)
     
     return JsonResponse(user_complaints, safe=False)
-
-# Get my applications (for citizens)
-@csrf_exempt
-def my_applications(request):
-    user = get_user_from_request(request)
-    
-    if not user:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-    
-    # Filter applications by user_id
-    user_apps = []
-    for tracking, app in applications_storage.items():
-        if app.get('user_id') == str(user.id):
-            user_apps.append(app)
-    
-    return JsonResponse(user_apps, safe=False)
 
 # Admin stats (for officers)
 @csrf_exempt
@@ -170,10 +85,6 @@ def admin_stats(request):
     hotspots_list.sort(key=lambda x: x['count'], reverse=True)
     
     return JsonResponse({
-        'total_applications': len(applications_storage),
-        'pending_applications': sum(1 for a in applications_storage.values() if a.get('status') in ['submitted', 'processing']),
-        'approved_applications': sum(1 for a in applications_storage.values() if a.get('status') == 'approved'),
-        'rejected_applications': sum(1 for a in applications_storage.values() if a.get('status') == 'rejected'),
         'total_complaints': total_complaints,
         'verified_complaints': verified_complaints,
         'pending_complaints': pending_complaints,
@@ -183,42 +94,9 @@ def admin_stats(request):
         'high_priority': high_priority,
         'medium_priority': medium_priority,
         'low_priority': low_priority,
-        'avg_processing_time': 5.5,
         'avg_resolution_time': 7.5,
         'corruption_hotspots': hotspots_list[:5]
     })
-
-# Update application status
-@csrf_exempt
-def update_application_status(request, application_id):
-    user = get_user_from_request(request)
-    
-    if not user:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-    
-    if user.role not in ['officer', 'admin']:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
-    if request.method == 'PATCH':
-        try:
-            data = json.loads(request.body)
-            new_status = data.get('status')
-            
-            # Update in storage if exists
-            for tracking, app in applications_storage.items():
-                if app.get('id') == application_id or tracking == application_id:
-                    applications_storage[tracking]['status'] = new_status
-                    break
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Status updated successfully',
-                'new_status': new_status
-            })
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-    
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 # Get single complaint details
 @csrf_exempt
@@ -276,59 +154,6 @@ def update_complaint_status(request, complaint_id):
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-# Get complaint statistics
-@csrf_exempt
-def complaint_stats(request):
-    user = get_user_from_request(request)
-    
-    if not user:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-    
-    if user.role not in ['officer', 'admin']:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
-    # Calculate real stats from storage
-    total = len(complaints_storage)
-    pending = sum(1 for c in complaints_storage.values() if c.get('status') == 'pending')
-    under_investigation = sum(1 for c in complaints_storage.values() if c.get('status') == 'under_investigation')
-    verified = sum(1 for c in complaints_storage.values() if c.get('is_verified', False))
-    resolved = sum(1 for c in complaints_storage.values() if c.get('status') == 'resolved')
-    rejected = sum(1 for c in complaints_storage.values() if c.get('status') == 'rejected')
-    escalated = sum(1 for c in complaints_storage.values() if c.get('status') == 'escalated')
-    dismissed = sum(1 for c in complaints_storage.values() if c.get('status') == 'dismissed')
-    
-    # Priority breakdown
-    by_priority = {
-        'low': sum(1 for c in complaints_storage.values() if c.get('priority') == 'low'),
-        'medium': sum(1 for c in complaints_storage.values() if c.get('priority') == 'medium'),
-        'high': sum(1 for c in complaints_storage.values() if c.get('priority') == 'high'),
-        'urgent': sum(1 for c in complaints_storage.values() if c.get('priority') == 'urgent')
-    }
-    
-    # Service breakdown
-    by_service = {
-        'passport': sum(1 for c in complaints_storage.values() if c.get('service_type') == 'passport'),
-        'driving_license': sum(1 for c in complaints_storage.values() if c.get('service_type') == 'driving_license'),
-        'birth_certificate': sum(1 for c in complaints_storage.values() if c.get('service_type') == 'birth_certificate'),
-        'tax_id': sum(1 for c in complaints_storage.values() if c.get('service_type') == 'tax_id')
-    }
-    
-    stats = {
-        'total': total,
-        'pending': pending,
-        'under_investigation': under_investigation,
-        'verified': verified,
-        'rejected': rejected,
-        'escalated': escalated,
-        'resolved': resolved,
-        'dismissed': dismissed,
-        'by_priority': by_priority,
-        'by_service': by_service,
-        'avg_resolution_time_days': 7.5
-    }
-    
-    return JsonResponse(stats)
-
 # Verify complaint
 @csrf_exempt
 def verify_complaint(request, complaint_id):
@@ -363,7 +188,6 @@ def verify_complaint(request, complaint_id):
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 # Submit new complaint (with user info)
-# Submit new complaint (with user info and priority)
 @csrf_exempt
 def complaints_list(request):
     if request.method == 'GET':
@@ -375,7 +199,7 @@ def complaints_list(request):
             user = get_user_from_request(request)
             complaint_id = f"CMP-{uuid.uuid4().hex[:8].upper()}"
             
-            # Store complaint with user information and priority
+            # Store complaint with user information
             complaint_data = {
                 'id': complaint_id,
                 'complaint_id': complaint_id,
@@ -389,12 +213,11 @@ def complaints_list(request):
                 'is_anonymous': data.get('is_anonymous', True),
                 'is_verified': False,
                 'status': 'pending',
-                'priority': data.get('priority', 'medium'),  # Priority from user
+                'priority': data.get('priority', 'medium'),
                 'reported_at': datetime.now().isoformat(),
                 'investigation_notes': '',
                 'action_taken': '',
                 'feedback_to_citizen': '',
-                # User information - link complaint to user
                 'user_id': str(user.id) if user else None,
                 'user_name': user.username if user else None,
                 'user_phone': user.phone if user else None,
@@ -414,21 +237,67 @@ def complaints_list(request):
             
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+# Get complaint statistics
+@csrf_exempt
+def complaint_stats(request):
+    user = get_user_from_request(request)
+    
+    if not user:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    if user.role not in ['officer', 'admin']:
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    total = len(complaints_storage)
+    pending = sum(1 for c in complaints_storage.values() if c.get('status') == 'pending')
+    under_investigation = sum(1 for c in complaints_storage.values() if c.get('status') == 'under_investigation')
+    verified = sum(1 for c in complaints_storage.values() if c.get('is_verified', False))
+    resolved = sum(1 for c in complaints_storage.values() if c.get('status') == 'resolved')
+    rejected = sum(1 for c in complaints_storage.values() if c.get('status') == 'rejected')
+    escalated = sum(1 for c in complaints_storage.values() if c.get('status') == 'escalated')
+    dismissed = sum(1 for c in complaints_storage.values() if c.get('status') == 'dismissed')
+    
+    by_priority = {
+        'low': sum(1 for c in complaints_storage.values() if c.get('priority') == 'low'),
+        'medium': sum(1 for c in complaints_storage.values() if c.get('priority') == 'medium'),
+        'high': sum(1 for c in complaints_storage.values() if c.get('priority') == 'high'),
+        'urgent': sum(1 for c in complaints_storage.values() if c.get('priority') == 'urgent')
+    }
+    
+    by_service = {
+        'passport': sum(1 for c in complaints_storage.values() if c.get('service_type') == 'passport'),
+        'driving_license': sum(1 for c in complaints_storage.values() if c.get('service_type') == 'driving_license'),
+        'birth_certificate': sum(1 for c in complaints_storage.values() if c.get('service_type') == 'birth_certificate'),
+        'tax_id': sum(1 for c in complaints_storage.values() if c.get('service_type') == 'tax_id')
+    }
+    
+    stats = {
+        'total': total,
+        'pending': pending,
+        'under_investigation': under_investigation,
+        'verified': verified,
+        'rejected': rejected,
+        'escalated': escalated,
+        'resolved': resolved,
+        'dismissed': dismissed,
+        'by_priority': by_priority,
+        'by_service': by_service,
+        'avg_resolution_time_days': 7.5
+    }
+    
+    return JsonResponse(stats)
+
 def api_home(request):
     return JsonResponse({
         'message': 'Anti-Corruption Digital Service Tracker API',
         'status': 'active',
         'version': '1.0.0',
         'endpoints': {
-            'applications': '/api/applications/',
-            'track': '/api/applications/<tracking_number>/',
             'complaints': '/api/complaints/',
-            'all-applications': '/api/applications/all-applications/',
-            'my-applications': '/api/applications/my-applications/',
             'all-complaints': '/api/complaints/all-complaints/',
             'my-complaints': '/api/complaints/my-complaints/',
             'admin-stats': '/api/dashboard/admin-stats/',
-            'complaint-detail': '/api/complaints/<complaint_id>/',
             'complaint-stats': '/api/complaints/stats/',
             'admin': '/admin/'
         }
@@ -439,21 +308,14 @@ urlpatterns = [
     path('api/', api_home),
     path('api/auth/', include('users.urls')),
     
-    # Application endpoints - ORDER MATTERS! Put specific paths BEFORE variable paths
-    path('api/applications/all-applications/', all_applications),
-    path('api/applications/my-applications/', my_applications),
-    path('api/applications/<str:application_id>/update-status/', update_application_status),
-    path('api/applications/<str:tracking_number>/', application_detail),
-    path('api/applications/', applications_list),
-    
-    # Complaint endpoints - ORDER MATTERS! Put specific paths BEFORE variable paths
+    # Complaint endpoints
+    path('api/complaints/', complaints_list),
     path('api/complaints/all-complaints/', all_complaints),
     path('api/complaints/my-complaints/', my_complaints),
     path('api/complaints/stats/', complaint_stats),
     path('api/complaints/<str:complaint_id>/verify/', verify_complaint),
     path('api/complaints/<str:complaint_id>/update-status/', update_complaint_status),
     path('api/complaints/<str:complaint_id>/', complaint_detail),
-    path('api/complaints/', complaints_list),
     
     # Dashboard stats
     path('api/dashboard/admin-stats/', admin_stats),
