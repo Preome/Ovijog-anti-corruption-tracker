@@ -5,29 +5,18 @@ const API = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
 });
 
-// Add request interceptor for debugging
+// Add token to every request
 API.interceptors.request.use(
-  config => {
-    console.log('Making request to:', config.url);
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
-  error => {
-    console.error('Request error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor for debugging
-API.interceptors.response.use(
-  response => {
-    console.log('Response from:', response.config.url, response.status);
-    return response;
-  },
-  error => {
-    console.error('Response error:', error.response?.status, error.response?.data);
+  (error) => {
     return Promise.reject(error);
   }
 );

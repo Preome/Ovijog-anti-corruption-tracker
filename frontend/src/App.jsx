@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Shield, LayoutDashboard, AlertTriangle, LogOut, User, ListChecks } from 'lucide-react';
+import { Shield, LayoutDashboard, AlertTriangle, LogOut, User, ListChecks, Users, CheckCircle } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ComplaintPage from './components/pages/ComplaintPage';
 import Dashboard from './components/pages/Dashboard';
@@ -8,17 +8,18 @@ import LoginPage from './components/pages/LoginPage';
 import RegisterPage from './components/pages/RegisterPage';
 import ProfilePage from './components/pages/ProfilePage';
 import CitizenComplaintTracker from './components/pages/CitizenComplaintTracker';
+import AdminApprovalPage from './components/pages/AdminApprovalPage';
+import VerifyEmailPage from './components/pages/VerifyEmailPage';
 
 // Role-Based Navigation Component
 function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
   
-  // Citizen Navigation Items (No Apply/Track)
+  // Citizen Navigation Items
   const citizenNavItems = [
     { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
     { path: '/complaint', label: 'অভিযোগ', icon: <AlertTriangle className="h-4 w-4" /> },
     { path: '/my-complaints', label: 'আমার অভিযোগ', icon: <ListChecks className="h-4 w-4" /> },
-    { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
   ];
   
   // Officer Navigation Items
@@ -27,12 +28,23 @@ function Navbar() {
     { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
   ];
   
+  // Admin Navigation Items
+  const adminNavItems = [
+    { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
+    { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
+    { path: '/admin/approvals', label: 'অ্যাপ্রুভাল', icon: <Users className="h-4 w-4" /> },
+  ];
+  
   const getNavItems = () => {
     if (!isAuthenticated) {
       return [{ path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> }];
     }
     
-    if (user?.role === 'officer' || user?.role === 'admin') {
+    if (user?.role === 'admin') {
+      return adminNavItems;
+    }
+    
+    if (user?.role === 'officer') {
       return officerNavItems;
     }
     
@@ -263,8 +275,11 @@ function OfficerHomePage() {
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
             স্বাগতম, {user?.full_name_bn || user?.username}!
           </h1>
-          <p className="text-xl text-gray-600 mb-8">
+          <p className="text-xl text-gray-600 mb-4">
             {user?.office_name && `অফিস: ${user.office_name}`}
+          </p>
+          <p className="text-lg text-gray-500 mb-8">
+            {user?.department_name && `বিভাগ: ${user.department_name}`}
           </p>
           
           <Link 
@@ -273,6 +288,47 @@ function OfficerHomePage() {
           >
             কর্মকর্তা ড্যাশবোর্ডে যান
           </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Admin Homepage
+function AdminHomePage() {
+  const { user } = useAuth();
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
+      <div className="container mx-auto px-4 py-12">
+        <div className="text-center">
+          <Shield className="h-20 w-20 text-indigo-600 mx-auto mb-6" />
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+            স্বাগতম, {user?.full_name_bn || user?.username}!
+          </h1>
+          <p className="text-xl text-gray-600 mb-8">
+            অ্যাডমিন প্যানেলে আপনাকে স্বাগতম
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            <Link 
+              to="/dashboard" 
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
+            >
+              <div className="text-purple-600 text-4xl mb-3">📊</div>
+              <h3 className="text-lg font-bold mb-1">ড্যাশবোর্ড</h3>
+              <p className="text-sm text-gray-600">সকল অভিযোগ দেখুন</p>
+            </Link>
+
+            <Link 
+              to="/admin/approvals" 
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
+            >
+              <div className="text-green-600 text-4xl mb-3">✅</div>
+              <h3 className="text-lg font-bold mb-1">অ্যাপ্রুভাল</h3>
+              <p className="text-sm text-gray-600">নতুন অফিসার অ্যাকাউন্ট অনুমোদন করুন</p>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -295,7 +351,11 @@ function HomePageRouter() {
     return <MainHomePage />;
   }
   
-  if (user?.role === 'officer' || user?.role === 'admin') {
+  if (user?.role === 'admin') {
+    return <AdminHomePage />;
+  }
+  
+  if (user?.role === 'officer') {
     return <OfficerHomePage />;
   }
   
@@ -332,10 +392,15 @@ function AppContent() {
       <div>
         <Navbar />
         <Routes>
+          {/* Homepage */}
           <Route path="/" element={<HomePageRouter />} />
+          
+          {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
           
+          {/* Citizen Routes */}
           <Route path="/complaint" element={
             <ProtectedRoute allowedRoles={['citizen']}>
               <ComplaintPage />
@@ -346,11 +411,22 @@ function AppContent() {
               <CitizenComplaintTracker />
             </ProtectedRoute>
           } />
+          
+          {/* Officer Routes */}
           <Route path="/dashboard" element={
             <ProtectedRoute allowedRoles={['officer', 'admin']}>
               <Dashboard />
             </ProtectedRoute>
           } />
+          
+          {/* Admin Routes */}
+          <Route path="/admin/approvals" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminApprovalPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Shared Routes */}
           <Route path="/profile" element={
             <ProtectedRoute allowedRoles={['citizen', 'officer', 'admin']}>
               <ProfilePage />

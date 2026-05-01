@@ -3,6 +3,15 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 import uuid
 
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    name_bn = models.CharField(max_length=100, verbose_name='নাম (বাংলা)')
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.name
+
 class User(AbstractUser):
     ROLE_CHOICES = [
         ('citizen', 'নাগরিক'),
@@ -10,8 +19,16 @@ class User(AbstractUser):
         ('admin', 'প্রশাসক'),
     ]
     
+    STATUS_CHOICES = [
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('suspended', 'Suspended'),
+    ]
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='citizen')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     
     # NID (National ID) - 10 or 17 digits
     nid = models.CharField(
@@ -39,6 +56,20 @@ class User(AbstractUser):
     full_name_bn = models.CharField(max_length=200, blank=True, verbose_name='পূর্ণ নাম (বাংলা)')
     office_name = models.CharField(max_length=255, blank=True, verbose_name='অফিসের নাম')
     designation = models.CharField(max_length=255, blank=True, verbose_name='পদবি')
+    
+    # Department for officers
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='officers')
+    
+    # Email verification
+    email_verified = models.BooleanField(default=False)
+    email_verification_token = models.CharField(max_length=255, blank=True, null=True)
+    email_verification_sent_at = models.DateTimeField(blank=True, null=True)
+    
+    # Account approval
+    approved_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_users')
+    approved_at = models.DateTimeField(blank=True, null=True)
+    rejection_reason = models.TextField(blank=True)
+    
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
