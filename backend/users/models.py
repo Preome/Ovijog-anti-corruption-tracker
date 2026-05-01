@@ -60,10 +60,13 @@ class User(AbstractUser):
     # Department for officers
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='officers')
     
-    # Email verification
+    # Email verification with OTP (No link system)
     email_verified = models.BooleanField(default=False)
-    email_verification_token = models.CharField(max_length=255, blank=True, null=True)
-    email_verification_sent_at = models.DateTimeField(blank=True, null=True)
+    
+    # OTP fields for email verification
+    otp_code = models.CharField(max_length=6, blank=True, null=True)
+    otp_created_at = models.DateTimeField(blank=True, null=True)
+    otp_attempts = models.IntegerField(default=0)
     
     # Account approval
     approved_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_users')

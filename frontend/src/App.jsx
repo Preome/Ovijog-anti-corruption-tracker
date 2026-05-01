@@ -9,7 +9,7 @@ import RegisterPage from './components/pages/RegisterPage';
 import ProfilePage from './components/pages/ProfilePage';
 import CitizenComplaintTracker from './components/pages/CitizenComplaintTracker';
 import AdminApprovalPage from './components/pages/AdminApprovalPage';
-import VerifyEmailPage from './components/pages/VerifyEmailPage';
+import OTPVerificationPage from './components/pages/OTPVerificationPage';
 
 // Role-Based Navigation Component
 function Navbar() {
@@ -267,6 +267,18 @@ function CitizenHomePage() {
 function OfficerHomePage() {
   const { user } = useAuth();
   
+  // Get department display name
+  const getDepartmentDisplay = () => {
+    if (!user?.department) return 'নির্ধারিত নয়';
+    const deptMap = {
+      'passport': 'পাসপোর্ট অধিদপ্তর',
+      'driving_license': 'বিআরটিএ - ড্রাইভিং লাইসেন্স',
+      'birth_certificate': 'জন্ম নিবন্ধন অধিদপ্তর',
+      'tax_id': 'কর অধিদপ্তর - ট্যাক্স আইডি'
+    };
+    return deptMap[user.department.name] || user.department.name_bn || user.department.name;
+  };
+  
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
       <div className="container mx-auto px-4 py-12">
@@ -278,8 +290,11 @@ function OfficerHomePage() {
           <p className="text-xl text-gray-600 mb-4">
             {user?.office_name && `অফিস: ${user.office_name}`}
           </p>
-          <p className="text-lg text-gray-500 mb-8">
-            {user?.department_name && `বিভাগ: ${user.department_name}`}
+          <p className="text-lg text-gray-500 mb-4">
+            বিভাগ: {getDepartmentDisplay()}
+          </p>
+          <p className="text-md text-gray-600 mb-8">
+            আপনি শুধুমাত্র আপনার বিভাগের সাথে সম্পর্কিত অভিযোগ দেখতে পাবেন
           </p>
           
           <Link 
@@ -398,7 +413,7 @@ function AppContent() {
           {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/verify-otp" element={<OTPVerificationPage />} />
           
           {/* Citizen Routes */}
           <Route path="/complaint" element={
