@@ -24,6 +24,8 @@ def get_user_from_request(request):
     return None
 
 # Get all complaints (for officers)
+# Get all complaints (for officers)
+# Get all complaints (for officers)
 @csrf_exempt
 def all_complaints(request):
     user = get_user_from_request(request)
@@ -34,7 +36,37 @@ def all_complaints(request):
     if user.role not in ['officer', 'admin']:
         return JsonResponse({'error': 'Unauthorized'}, status=403)
     
-    return JsonResponse(list(complaints_storage.values()), safe=False)
+    # Get all complaints from storage
+    all_complaints_list = list(complaints_storage.values())
+    
+    print(f"User: {user.username}, Role: {user.role}")
+    print(f"User department: {user.department.name if user.department else 'None'}")
+    print(f"Total complaints in storage: {len(all_complaints_list)}")
+    
+    # For officers (not admin), filter by department
+    if user.role == 'officer' and user.department:
+        dept_name = user.department.name
+        print(f"Filtering complaints for department: {dept_name}")
+        
+        # Filter complaints by service_type matching department
+        filtered_complaints = []
+        for complaint in all_complaints_list:
+            complaint_service = complaint.get('service_type', '')
+            print(f"Complaint service: {complaint_service}, Department: {dept_name}")
+            
+            # Match complaint service_type with officer's department
+            if complaint_service == dept_name:
+                filtered_complaints.append(complaint)
+        
+        print(f"Filtered complaints count: {len(filtered_complaints)}")
+        return JsonResponse(filtered_complaints, safe=False)
+    
+    # Admin sees all complaints
+    if user.role == 'admin':
+        return JsonResponse(all_complaints_list, safe=False)
+    
+    # Officers without department see empty list
+    return JsonResponse([], safe=False)
 
 # Get my complaints (for citizens)
 @csrf_exempt
