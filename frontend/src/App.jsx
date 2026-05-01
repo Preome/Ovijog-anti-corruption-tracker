@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Shield, LayoutDashboard, FileText, Search, AlertTriangle, LogOut, User } from 'lucide-react';
+import { Shield, LayoutDashboard, FileText, Search, AlertTriangle, LogOut, User, ListChecks } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ApplyPage from './components/pages/ApplyPage';
 import TrackPage from './components/pages/TrackPage';
@@ -9,20 +9,23 @@ import Dashboard from './components/pages/Dashboard';
 import LoginPage from './components/pages/LoginPage';
 import RegisterPage from './components/pages/RegisterPage';
 import ProfilePage from './components/pages/ProfilePage';
+import CitizenComplaintTracker from './components/pages/CitizenComplaintTracker';
 
 // Role-Based Navigation Component
 function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
   
-  // Citizen Navigation Items (No Dashboard)
+  // Citizen Navigation Items
   const citizenNavItems = [
     { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
     { path: '/apply', label: 'আবেদন', icon: <FileText className="h-4 w-4" /> },
     { path: '/track', label: 'ট্র্যাক', icon: <Search className="h-4 w-4" /> },
     { path: '/complaint', label: 'অভিযোগ', icon: <AlertTriangle className="h-4 w-4" /> },
+    { path: '/my-complaints', label: 'আমার অভিযোগ', icon: <ListChecks className="h-4 w-4" /> },
+    { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
   ];
   
-  // Officer Navigation Items (With Dashboard)
+  // Officer Navigation Items (No apply, track, complaint)
   const officerNavItems = [
     { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
     { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
@@ -31,7 +34,7 @@ function Navbar() {
   // Get navigation based on role
   const getNavItems = () => {
     if (!isAuthenticated) {
-      return citizenNavItems;
+      return citizenNavItems.slice(0, 1); // Only show Home for non-authenticated
     }
     
     if (user?.role === 'officer' || user?.role === 'admin') {
@@ -158,7 +161,6 @@ function Navbar() {
 function MainHomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Hero Section */}
       <div className="container mx-auto px-4 py-12">
         <div className="text-center">
           <Shield className="h-24 w-24 text-blue-600 mx-auto mb-6 animate-pulse" />
@@ -172,7 +174,6 @@ function MainHomePage() {
             ডিজিটাল প্রযুক্তির মাধ্যমে সরকারি সেবায় দুর্নীতি প্রতিরোধ ও স্বচ্ছতা নিশ্চিতকরণে আমাদের অঙ্গীকার
           </p>
           
-          {/* Action Buttons */}
           <div className="space-x-4 mb-16">
             <Link 
               to="/register" 
@@ -196,95 +197,27 @@ function MainHomePage() {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Service 1 */}
             <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105">
               <div className="text-blue-600 text-5xl mb-4">📝</div>
               <h3 className="text-xl font-bold text-gray-800 mb-3">অনলাইন আবেদন</h3>
-              <p className="text-gray-600">
-                পাসপোর্ট, ড্রাইভিং লাইসেন্স, জন্ম নিবন্ধন ও ট্যাক্স আইডি সহ সকল সরকারি সেবার জন্য অনলাইনে আবেদন করুন।
-              </p>
-              <ul className="text-sm text-gray-500 mt-3 space-y-1">
-                <li>✓ ২৪/৭ সেবা গ্রহণ</li>
-                <li>✓ ডিজিটাল ট্র্যাকিং নম্বর</li>
-                <li>✓ স্বয়ংক্রিয় রসিদ</li>
-              </ul>
+              <p className="text-gray-600">পাসপোর্ট, ড্রাইভিং লাইসেন্স, জন্ম নিবন্ধন ও ট্যাক্স আইডি সহ সকল সরকারি সেবার জন্য অনলাইনে আবেদন করুন।</p>
             </div>
-
-            {/* Service 2 */}
             <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105">
               <div className="text-green-600 text-5xl mb-4">🔍</div>
               <h3 className="text-xl font-bold text-gray-800 mb-3">রিয়েল-টাইম ট্র্যাকিং</h3>
-              <p className="text-gray-600">
-                আপনার আবেদনের বর্তমান অবস্থান জানুন রিয়েল টাইমে। কোথায়, কতদূর এগিয়েছে আপনার আবেদন।
-              </p>
-              <ul className="text-sm text-gray-500 mt-3 space-y-1">
-                <li>✓ কিউআর কোড স্ক্যান</li>
-                <li>✓ এসএমএস নোটিফিকেশন</li>
-                <li>✓ ইমেইল আপডেট</li>
-              </ul>
+              <p className="text-gray-600">আপনার আবেদনের বর্তমান অবস্থান জানুন রিয়েল টাইমে। কোথায়, কতদূর এগিয়েছে আপনার আবেদন।</p>
             </div>
-
-            {/* Service 3 */}
             <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105">
               <div className="text-red-600 text-5xl mb-4">⚠️</div>
               <h3 className="text-xl font-bold text-gray-800 mb-3">গোপন অভিযোগ</h3>
-              <p className="text-gray-600">
-                নাম না জানিয়ে দুর্নীতির অভিযোগ জানান। আপনার পরিচয় সম্পূর্ণ গোপন থাকবে।
-              </p>
-              <ul className="text-sm text-gray-500 mt-3 space-y-1">
-                <li>✓ সম্পূর্ণ বেনামী</li>
-                <li>✓ যাচাই প্রক্রিয়া</li>
-                <li>✓ ফিরতি প্রতিক্রিয়া</li>
-              </ul>
-            </div>
-
-            {/* Service 4 */}
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105">
-              <div className="text-purple-600 text-5xl mb-4">📊</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">স্বচ্ছতা ড্যাশবোর্ড</h3>
-              <p className="text-gray-600">
-                সকল সেবার গড় সময়, আবেদনের সংখ্যা ও দুর্নীতির প্রবণতা সম্পর্কে জানুন।
-              </p>
-              <ul className="text-sm text-gray-500 mt-3 space-y-1">
-                <li>✓ রিয়েল ডেটা বিশ্লেষণ</li>
-                <li>✓ চার্ট ও গ্রাফ</li>
-                <li>✓ কর্মকর্তা কর্মদক্ষতা</li>
-              </ul>
-            </div>
-
-            {/* Service 5 */}
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105">
-              <div className="text-yellow-600 text-5xl mb-4">🤖</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">এআই মনিটরিং</h3>
-              <p className="text-gray-600">
-                কৃত্রিম বুদ্ধিমত্তা ব্যবহার করে অস্বাভাবিক কার্যক্রম সনাক্তকরণ ও প্রতিরোধ।
-              </p>
-              <ul className="text-sm text-gray-500 mt-3 space-y-1">
-                <li>✓ স্বয়ংক্রিয় সতর্কতা</li>
-                <li>✓ অ্যানোমালি ডিটেকশন</li>
-                <li>✓ রিস্ক অ্যাসেসমেন্ট</li>
-              </ul>
-            </div>
-
-            {/* Service 6 */}
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105">
-              <div className="text-indigo-600 text-5xl mb-4">🔒</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">নিরাপত্তা ও গোপনীয়তা</h3>
-              <p className="text-gray-600">
-                আপনার তথ্য সম্পূর্ণ সুরক্ষিত। ব্লকচেইন প্রযুক্তি ব্যবহার করে ডেটার নির্ভরযোগ্যতা নিশ্চিত।
-              </p>
-              <ul className="text-sm text-gray-500 mt-3 space-y-1">
-                <li>✓ এন্ড-টু-এন্ড এনক্রিপশন</li>
-                <li>✓ ব্লকচেইন ভেরিফিকেশন</li>
-                <li>✓ ডেটা প্রাইভেসি</li>
-              </ul>
+              <p className="text-gray-600">নাম না জানিয়ে দুর্নীতির অভিযোগ জানান। আপনার পরিচয় সম্পূর্ণ গোপন থাকবে।</p>
             </div>
           </div>
         </div>
 
         {/* Stats Section */}
-        <div className="bg-blue-900 text-white rounded-2xl mt-16 p-8 md:p-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
+        <div className="bg-blue-900 text-white rounded-2xl mt-16 p-8 text-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="text-4xl font-bold mb-2">১০,০০০+</div>
               <div className="text-blue-200">সফল আবেদন</div>
@@ -294,75 +227,10 @@ function MainHomePage() {
               <div className="text-blue-200">সেবা স্বচ্ছতা</div>
             </div>
             <div>
-              <div className="text-4xl font-bold mb-2">৫০০+</div>
-              <div className="text-blue-200">গুরুতর অভিযোগ</div>
-            </div>
-            <div>
               <div className="text-4xl font-bold mb-2">২৪/৭</div>
               <div className="text-blue-200">সহায়তা সেবা</div>
             </div>
           </div>
-        </div>
-
-        {/* How It Works Section */}
-        <div className="max-w-6xl mx-auto mt-16">
-          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
-            কিভাবে কাজ করে?
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="bg-blue-100 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                ১
-              </div>
-              <h3 className="text-xl font-semibold mb-2">অনলাইন আবেদন</h3>
-              <p className="text-gray-600">আপনার প্রয়োজনীয় সেবা নির্বাচন করুন এবং অনলাইনে আবেদন করুন</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-blue-100 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                ২
-              </div>
-              <h3 className="text-xl font-semibold mb-2">ট্র্যাকিং নম্বর পান</h3>
-              <p className="text-gray-600">ইউনিক ট্র্যাকিং নম্বর ও কিউআর কোড পাবেন</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-blue-100 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                ৩
-              </div>
-              <h3 className="text-xl font-semibold mb-2">স্ট্যাটাস মনিটর করুন</h3>
-              <p className="text-gray-600">যেকোনো সময় আপনার আবেদনের অবস্থান জানুন</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Call to Action */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl mt-16 p-8 md:p-12 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">
-            আজই দুর্নীতি প্রতিরোধে অংশ নিন
-          </h2>
-          <p className="text-lg mb-6 opacity-90">
-            একটি স্বচ্ছ ও জবাবদিহিমূলক সেবা ব্যবস্থা গড়ে তুলতে আমাদের সাথে যোগ দিন
-          </p>
-          <div className="space-x-4">
-            <Link 
-              to="/register" 
-              className="inline-block bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
-            >
-              এখনই রেজিস্ট্রেশন করুন
-            </Link>
-            <Link 
-              to="/login" 
-              className="inline-block bg-transparent border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition"
-            >
-              লগইন করুন
-            </Link>
-          </div>
-        </div>
-        
-        {/* Footer Note */}
-        <div className="text-center text-gray-500 text-sm mt-12 py-8 border-t">
-          <p>© ২০২৪ সততা ট্র্যাকার - দুর্নীতিমুক্ত বাংলাদেশ গড়ার প্রত্যয়</p>
-          <p className="mt-2">সকল তথ্য গোপনীয় ও সুরক্ষিত</p>
         </div>
       </div>
     </div>
@@ -385,32 +253,41 @@ function CitizenHomePage() {
             আপনার সেবা গ্রহণ সহজ করতে আমরা এখানে আছি
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             <Link 
               to="/apply" 
-              className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition transform hover:scale-105"
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105"
             >
-              <div className="text-blue-600 text-5xl mb-4">📝</div>
-              <h3 className="text-xl font-bold mb-2">নতুন আবেদন</h3>
-              <p className="text-gray-600">সরকারি সেবার জন্য আবেদন করুন</p>
+              <div className="text-blue-600 text-4xl mb-3">📝</div>
+              <h3 className="text-lg font-bold mb-1">নতুন আবেদন</h3>
+              <p className="text-sm text-gray-600">সরকারি সেবার জন্য আবেদন করুন</p>
             </Link>
             
             <Link 
               to="/track" 
-              className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition transform hover:scale-105"
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105"
             >
-              <div className="text-green-600 text-5xl mb-4">🔍</div>
-              <h3 className="text-xl font-bold mb-2">আবেদন ট্র্যাক</h3>
-              <p className="text-gray-600">আপনার আবেদনের অবস্থান জানুন</p>
+              <div className="text-green-600 text-4xl mb-3">🔍</div>
+              <h3 className="text-lg font-bold mb-1">আবেদন ট্র্যাক</h3>
+              <p className="text-sm text-gray-600">আপনার আবেদনের অবস্থান জানুন</p>
             </Link>
             
             <Link 
               to="/complaint" 
-              className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition transform hover:scale-105"
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105"
             >
-              <div className="text-red-600 text-5xl mb-4">⚠️</div>
-              <h3 className="text-xl font-bold mb-2">অভিযোগ করুন</h3>
-              <p className="text-gray-600">দুর্নীতির অভিযোগ জানান</p>
+              <div className="text-red-600 text-4xl mb-3">⚠️</div>
+              <h3 className="text-lg font-bold mb-1">নতুন অভিযোগ</h3>
+              <p className="text-sm text-gray-600">দুর্নীতির অভিযোগ জানান</p>
+            </Link>
+
+            <Link 
+              to="/my-complaints" 
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105"
+            >
+              <div className="text-purple-600 text-4xl mb-3">📋</div>
+              <h3 className="text-lg font-bold mb-1">আমার অভিযোগ</h3>
+              <p className="text-sm text-gray-600">আপনার অভিযোগের অবস্থা দেখুন</p>
             </Link>
           </div>
         </div>
@@ -521,6 +398,11 @@ function AppContent() {
           <Route path="/complaint" element={
             <ProtectedRoute allowedRoles={['citizen']}>
               <ComplaintPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-complaints" element={
+            <ProtectedRoute allowedRoles={['citizen']}>
+              <CitizenComplaintTracker />
             </ProtectedRoute>
           } />
           

@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
 import API from '../../services/api';
-import { uploadToCloudinary, uploadMultipleToCloudinary } from '../../services/cloudinary';
+import { uploadToCloudinary } from '../../services/cloudinary';
 import toast from 'react-hot-toast';
-import { Shield, Upload, X, FileText, Image, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { Shield, Upload, X, FileText, Image, AlertCircle, Loader, Flag } from 'lucide-react';
 
 function ComplaintPage() {
   const [formData, setFormData] = useState({
@@ -12,6 +12,7 @@ function ComplaintPage() {
     amount_requested: '',
     officer_name: '',
     description: '',
+    priority: 'medium',  // New field
     is_anonymous: true
   });
   const [files, setFiles] = useState([]);
@@ -30,7 +31,7 @@ function ComplaintPage() {
     const selectedFiles = Array.from(e.target.files);
     const validFiles = selectedFiles.filter(file => {
       const isValidType = file.type.startsWith('image/') || file.type === 'application/pdf';
-      const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB
+      const isValidSize = file.size <= 5 * 1024 * 1024;
       
       if (!isValidType) {
         toast.error(`${file.name} - শুধুমাত্র ছবি বা PDF ফাইল সমর্থিত`);
@@ -85,10 +86,8 @@ function ComplaintPage() {
     e.preventDefault();
     setLoading(true);
     
-    // Upload files first
     const uploadedFiles = await uploadFiles();
     
-    // Prepare submission data
     const submitData = {
       ...formData,
       evidence_documents: uploadedFiles,
@@ -104,6 +103,16 @@ function ComplaintPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getPriorityColor = (priority) => {
+    const colors = {
+      low: 'text-gray-600',
+      medium: 'text-blue-600',
+      high: 'text-orange-600',
+      urgent: 'text-red-600'
+    };
+    return colors[priority] || 'text-gray-600';
   };
 
   if (complaintId) {
@@ -130,6 +139,7 @@ function ComplaintPage() {
                     amount_requested: '',
                     officer_name: '',
                     description: '',
+                    priority: 'medium',
                     is_anonymous: true
                   });
                 }}
@@ -138,10 +148,10 @@ function ComplaintPage() {
                 নতুন অভিযোগ
               </button>
               <a
-                href="/dashboard"
+                href="/my-complaints"
                 className="inline-block bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition"
               >
-                ড্যাশবোর্ডে যান
+                আমার অভিযোগ দেখুন
               </a>
             </div>
           </div>
@@ -225,6 +235,66 @@ function ComplaintPage() {
                 />
               </div>
 
+              {/* Priority Selection */}
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2 font-semibold">
+                  অভিযোগের জরুরিতা *
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, priority: 'low' })}
+                    className={`p-3 rounded-lg border-2 transition flex items-center justify-center gap-2 ${
+                      formData.priority === 'low'
+                        ? 'border-gray-500 bg-gray-100'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Flag className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">নিম্ন</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, priority: 'medium' })}
+                    className={`p-3 rounded-lg border-2 transition flex items-center justify-center gap-2 ${
+                      formData.priority === 'medium'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <Flag className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm font-medium text-blue-700">মধ্যম</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, priority: 'high' })}
+                    className={`p-3 rounded-lg border-2 transition flex items-center justify-center gap-2 ${
+                      formData.priority === 'high'
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-gray-200 hover:border-orange-300'
+                    }`}
+                  >
+                    <Flag className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm font-medium text-orange-700">উচ্চ</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, priority: 'urgent' })}
+                    className={`p-3 rounded-lg border-2 transition flex items-center justify-center gap-2 ${
+                      formData.priority === 'urgent'
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-200 hover:border-red-300'
+                    }`}
+                  >
+                    <Flag className="h-4 w-4 text-red-500" />
+                    <span className="text-sm font-medium text-red-700">জরুরি</span>
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  জরুরি ভিত্তিতে অভিযোগ দ্রুত নিষ্পত্তি করা হবে
+                </p>
+              </div>
+
               {/* Amount Requested */}
               <div className="mb-4">
                 <label className="block text-gray-700 mb-2 font-semibold">
@@ -293,7 +363,6 @@ function ComplaintPage() {
                   />
                 </div>
                 
-                {/* File List */}
                 {files.length > 0 && (
                   <div className="mt-4 space-y-2">
                     <p className="font-semibold text-sm">আপলোডের জন্য নির্বাচিত ফাইল ({files.length}):</p>
@@ -379,6 +448,7 @@ function ComplaintPage() {
               <li>✓ সঠিক তথ্য প্রদান করুন</li>
               <li>✓ প্রমাণ সহ অভিযোগ দ্রুত নিষ্পত্তি হয়</li>
               <li>✓ মিথ্যা অভিযোগ দন্ডনীয় অপরাধ</li>
+              <li>✓ জরুরি অভিযোগ অগ্রাধিকার পাবে</li>
             </ul>
           </div>
         </div>
