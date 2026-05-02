@@ -11,7 +11,6 @@ import ComplaintManagement from './ComplaintManagement';
 
 function OfficerDashboard() {
   const { user } = useAuth();
-  const [applications, setApplications] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -21,10 +20,6 @@ function OfficerDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [stats, setStats] = useState({
-    total_applications: 0,
-    pending_applications: 0,
-    approved_applications: 0,
-    rejected_applications: 0,
     total_complaints: 0,
     verified_complaints: 0,
     pending_complaints: 0,
@@ -37,7 +32,6 @@ function OfficerDashboard() {
     avg_resolution_time: 0,
     corruption_hotspots: []
   });
-  const [selectedTab, setSelectedTab] = useState('complaints'); // Default to complaints tab
 
   useEffect(() => {
     fetchData();
@@ -46,7 +40,6 @@ function OfficerDashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Only fetch complaints for officers (applications are being removed)
       const complaintsRes = await API.get('/complaints/all-complaints/');
       
       const complaintsData = Array.isArray(complaintsRes.data) ? complaintsRes.data : [];
@@ -57,7 +50,7 @@ function OfficerDashboard() {
       const total = complaintsData.length;
       const pending = complaintsData.filter(c => c.status === 'pending').length;
       const underInvestigation = complaintsData.filter(c => c.status === 'under_investigation').length;
-      const verified = complaintsData.filter(c => c.is_verified === true).length;
+      const verified = complaintsData.filter(c => c.status === 'verified').length;
       const resolved = complaintsData.filter(c => c.status === 'resolved').length;
       const urgent = complaintsData.filter(c => c.priority === 'urgent').length;
       const high = complaintsData.filter(c => c.priority === 'high').length;
@@ -75,10 +68,6 @@ function OfficerDashboard() {
       const hotspotsList = Object.entries(hotspots).map(([location, count]) => ({ location, count })).slice(0, 5);
       
       setStats({
-        total_applications: 0,
-        pending_applications: 0,
-        approved_applications: 0,
-        rejected_applications: 0,
         total_complaints: total,
         verified_complaints: verified,
         pending_complaints: pending,
@@ -234,7 +223,7 @@ function OfficerDashboard() {
           </div>
         </div>
 
-        {/* Stats Cards - Only Complaint Stats */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
             <div className="flex items-center justify-between">
@@ -338,7 +327,7 @@ function OfficerDashboard() {
           </div>
         )}
 
-        {/* Complaints Section - Main Content */}
+        {/* Complaints Section */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="border-b px-6 py-4">
             <div className="flex justify-between items-center">
@@ -418,7 +407,7 @@ function OfficerDashboard() {
               </div>
             ) : (
               filteredComplaints.map((complaint) => (
-                <div key={complaint.id} className="p-6 hover:bg-gray-50 transition">
+                <div key={complaint.complaint_id} className="p-6 hover:bg-gray-50 transition">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">

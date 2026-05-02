@@ -22,14 +22,14 @@ function ComplaintManagement({ complaint, onClose, onUpdate }) {
 
   useEffect(() => {
     fetchComplaintDetails();
-  }, [complaint?.id]);
+  }, [complaint?.complaint_id]);
 
   const fetchComplaintDetails = async () => {
-    if (!complaint?.id) return;
+    if (!complaint?.complaint_id) return;
     
     setLoading(true);
     try {
-      const response = await API.get(`/complaints/${complaint.id}/`);
+      const response = await API.get(`/complaints/${complaint.complaint_id}/`);
       setComplaintData(response.data);
       setFormData({
         status: response.data.status || 'pending',
@@ -55,7 +55,7 @@ function ComplaintManagement({ complaint, onClose, onUpdate }) {
     setUpdating(true);
     
     try {
-      const response = await API.patch(`/complaints/${complaint.id}/update-status/`, formData);
+      const response = await API.patch(`/complaints/${complaint.complaint_id}/update-status/`, formData);
       if (response.data.success) {
         toast.success('অভিযোগের অবস্থা আপডেট করা হয়েছে');
         onUpdate?.();
