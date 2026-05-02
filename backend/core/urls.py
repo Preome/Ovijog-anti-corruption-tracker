@@ -5,10 +5,9 @@ import json
 import uuid
 from datetime import datetime
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from complaints.models import Complaint
-from users.models import User
-from django.core.paginator import Paginator
+from users.models import User, Notification
+from users import views as users_views
 
 # Helper function to get user from JWT token
 def get_user_from_request(request):
@@ -36,15 +35,15 @@ def complaint_to_dict(complaint):
         'officer_name': complaint.officer_name,
         'status': complaint.status,
         'priority': complaint.priority,
-        'is_verified': complaint.status == 'verified',  # Derive from status
+        'is_verified': complaint.status == 'verified',
         'is_anonymous': complaint.is_anonymous,
-        'evidence_documents': complaint.evidence_documents if hasattr(complaint, 'evidence_documents') else [],
-        'investigation_notes': complaint.investigation_notes if hasattr(complaint, 'investigation_notes') else '',
-        'action_taken': complaint.action_taken if hasattr(complaint, 'action_taken') else '',
-        'feedback_to_citizen': complaint.feedback_to_citizen if hasattr(complaint, 'feedback_to_citizen') else '',
+        'evidence_documents': complaint.evidence_documents,
+        'investigation_notes': complaint.investigation_notes,
+        'action_taken': complaint.action_taken,
+        'feedback_to_citizen': complaint.feedback_to_citizen,
         'reported_at': complaint.reported_at.isoformat() if complaint.reported_at else None,
         'updated_at': complaint.updated_at.isoformat() if hasattr(complaint, 'updated_at') and complaint.updated_at else None,
-        'user_id': str(complaint.user.id) if complaint.user else None,
+        'user_id': str(complaint.user.id) if complaint.user and not complaint.is_anonymous else None,  # Hide for anonymous
     }
 
 # Get all complaints (for officers - filtered by department)
@@ -59,11 +58,9 @@ def all_complaints(request):
         return JsonResponse({'error': 'Unauthorized'}, status=403)
     
     try:
-        # Get from database
         if user.role == 'admin':
             complaints = Complaint.objects.all().order_by('-reported_at')
         else:
-            # Filter by officer's department
             if user.department:
                 complaints = Complaint.objects.filter(
                     service_type=user.department.name
@@ -71,17 +68,18 @@ def all_complaints(request):
             else:
                 complaints = Complaint.objects.none()
         
-        complaints_data = [complaint_to_dict(c) for c in complaints]
-        
-        print(f"User: {user.username}, Role: {user.role}")
-        print(f"User department: {user.department.name if user.department else 'None'}")
-        print(f"Total complaints in DB: {complaints.count()}")
+        complaints_data = []
+        for c in complaints:
+            complaint_dict = complaint_to_dict(c)
+            # If complaint is anonymous, hide user info from officers
+            if c.is_anonymous:
+                complaint_dict['user_id'] = None
+                complaint_dict['user_name'] = 'Anonymous'
+            complaints_data.append(complaint_dict)
         
         return JsonResponse(complaints_data, safe=False)
     except Exception as e:
         print(f"Error in all_complaints: {e}")
-        import traceback
-        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
 # Get my complaints (for citizens)
@@ -93,7 +91,6 @@ def my_complaints(request):
         return JsonResponse({'error': 'Authentication required'}, status=401)
     
     try:
-        # Filter complaints by user
         complaints = Complaint.objects.filter(user=user).order_by('-reported_at')
         complaints_data = [complaint_to_dict(c) for c in complaints]
         
@@ -102,8 +99,6 @@ def my_complaints(request):
         return JsonResponse(complaints_data, safe=False)
     except Exception as e:
         print(f"Error in my_complaints: {e}")
-        import traceback
-        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
 # Admin stats (for officers)
@@ -118,7 +113,6 @@ def admin_stats(request):
         return JsonResponse({'error': 'Unauthorized'}, status=403)
     
     try:
-        # Calculate real stats from database
         if user.role == 'admin':
             complaints_qs = Complaint.objects.all()
         else:
@@ -181,10 +175,49 @@ def complaint_detail(request, complaint_id):
     except Complaint.DoesNotExist:
         return JsonResponse({'error': 'Complaint not found'}, status=404)
     except Exception as e:
-        print(f"Error in complaint_detail: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
-# Update complaint status with full details
+# Submit new complaint
+@csrf_exempt
+def complaints_list(request):
+    if request.method == 'GET':
+        complaints = Complaint.objects.all().order_by('-reported_at')
+        complaints_data = [complaint_to_dict(c) for c in complaints]
+        return JsonResponse(complaints_data, safe=False)
+    
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user = get_user_from_request(request)
+            
+            incident_date = datetime.fromisoformat(data.get('incident_date').replace('Z', '+00:00')) if data.get('incident_date') else datetime.now()
+            
+            # ALWAYS link the user if logged in, regardless of is_anonymous
+            complaint = Complaint.objects.create(
+                service_type=data.get('service_type'),
+                office_location=data.get('office_location'),
+                incident_date=incident_date,
+                description=data.get('description'),
+                amount_requested=data.get('amount_requested') if data.get('amount_requested') else None,
+                officer_name=data.get('officer_name', ''),
+                evidence_documents=data.get('evidence_documents', []),
+                is_anonymous=data.get('is_anonymous', True),  # This only controls display to officers
+                priority=data.get('priority', 'medium'),
+                status='pending',
+                user=user if user else None  # Always link user if logged in
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Complaint submitted successfully',
+                'complaint_id': complaint.complaint_id,
+                'status': 'received'
+            }, status=201)
+        except Exception as e:
+            print(f"Error creating complaint: {e}")
+            return JsonResponse({'error': str(e)}, status=500)
+
+# Update complaint status
 @csrf_exempt
 def update_complaint_status(request, complaint_id):
     user = get_user_from_request(request)
@@ -200,17 +233,68 @@ def update_complaint_status(request, complaint_id):
             data = json.loads(request.body)
             complaint = Complaint.objects.get(complaint_id=complaint_id)
             
+            old_status = complaint.status
+            new_status = data.get('status', complaint.status)
+            
             # Update fields
-            complaint.status = data.get('status', complaint.status)
+            complaint.status = new_status
             complaint.priority = data.get('priority', complaint.priority)
             complaint.investigation_notes = data.get('investigation_notes', complaint.investigation_notes)
             complaint.action_taken = data.get('action_taken', complaint.action_taken)
-            complaint.feedback_to_citizen = data.get('feedback_to_citizen', complaint.feedback_to_citizen)
             
-            if data.get('status') == 'verified':
+            feedback = data.get('feedback_to_citizen', '')
+            if feedback:
+                complaint.feedback_to_citizen = feedback
+                
+                # Create notification for officer response
+                if complaint.user:
+                    Notification.objects.create(
+                        user=complaint.user,
+                        notification_type='officer_response',
+                        title='কর্তৃপক্ষের প্রতিক্রিয়া',
+                        message=feedback,
+                        priority='medium',
+                        complaint_id=complaint.complaint_id
+                    )
+                    print(f"📧 Response notification sent to {complaint.user.username}")
+            
+            if new_status == 'verified':
                 complaint.resolution_date = datetime.now()
             
             complaint.save()
+            
+            # Create notification for status change
+            if old_status != new_status and complaint.user:
+                # Define status messages in Bengali
+                status_titles = {
+                    'under_investigation': 'তদন্ত শুরু হয়েছে',
+                    'verified': 'অভিযোগ যাচাই করা হয়েছে',
+                    'rejected': 'অভিযোগ প্রমাণিত হয়নি',
+                    'resolved': 'অভিযোগ নিষ্পত্তি হয়েছে',
+                    'escalated': 'অভিযোগ উর্ধ্বতন কর্তৃপক্ষে প্রেরিত'
+                }
+                
+                status_messages = {
+                    'under_investigation': f'আপনার অভিযোগ (ID: {complaint.complaint_id}) এর তদন্ত শুরু হয়েছে।',
+                    'verified': f'আপনার অভিযোগ (ID: {complaint.complaint_id}) যাচাই করা হয়েছে এবং সঠিক বলে প্রমাণিত হয়েছে।',
+                    'rejected': f'আপনার অভিযোগ (ID: {complaint.complaint_id}) পর্যাপ্ত প্রমাণের অভাবে প্রত্যাখ্যান করা হয়েছে।',
+                    'resolved': f'আপনার অভিযোগ (ID: {complaint.complaint_id}) নিষ্পত্তি করা হয়েছে। প্রয়োজনীয় ব্যবস্থা নেওয়া হয়েছে।',
+                    'escalated': f'আপনার অভিযোগ (ID: {complaint.complaint_id}) উর্ধ্বতন কর্তৃপক্ষে প্রেরণ করা হয়েছে।'
+                }
+                
+                title = status_titles.get(new_status, 'অভিযোগের অবস্থা পরিবর্তন')
+                message = status_messages.get(new_status, f'আপনার অভিযোগ (ID: {complaint.complaint_id}) এর অবস্থা "{new_status}" এ পরিবর্তিত হয়েছে।')
+                priority = 'high' if new_status in ['verified', 'resolved'] else 'medium'
+                
+                Notification.objects.create(
+                    user=complaint.user,
+                    notification_type='complaint_status',
+                    title=title,
+                    message=message,
+                    priority=priority,
+                    complaint_id=complaint.complaint_id
+                )
+                print(f"📧 Status notification sent to {complaint.user.username}: {old_status} -> {new_status}")
             
             return JsonResponse({
                 'success': True,
@@ -227,90 +311,6 @@ def update_complaint_status(request, complaint_id):
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-# Verify complaint
-@csrf_exempt
-def verify_complaint(request, complaint_id):
-    user = get_user_from_request(request)
-    
-    if not user:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-    
-    if user.role not in ['officer', 'admin']:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
-    if request.method == 'PATCH':
-        try:
-            data = json.loads(request.body)
-            is_verified = data.get('is_verified', True)
-            
-            complaint = Complaint.objects.get(complaint_id=complaint_id)
-            if is_verified:
-                complaint.status = 'verified'
-                complaint.resolution_date = datetime.now()
-            complaint.save()
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Complaint verified successfully',
-                'complaint_id': complaint_id,
-                'is_verified': is_verified
-            })
-        except Complaint.DoesNotExist:
-            return JsonResponse({'error': 'Complaint not found'}, status=404)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except Exception as e:
-            print(f"Error in verify_complaint: {e}")
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-# Submit new complaint
-@csrf_exempt
-def complaints_list(request):
-    if request.method == 'GET':
-        complaints = Complaint.objects.all().order_by('-reported_at')
-        complaints_data = [complaint_to_dict(c) for c in complaints]
-        return JsonResponse(complaints_data, safe=False)
-    
-    elif request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            user = get_user_from_request(request)
-            
-            # Parse incident date
-            incident_date = datetime.fromisoformat(data.get('incident_date').replace('Z', '+00:00')) if data.get('incident_date') else datetime.now()
-            
-            # Create complaint in database
-            complaint = Complaint.objects.create(
-                service_type=data.get('service_type'),
-                office_location=data.get('office_location'),
-                incident_date=incident_date,
-                description=data.get('description'),
-                amount_requested=data.get('amount_requested'),
-                officer_name=data.get('officer_name', ''),
-                evidence_documents=data.get('evidence_documents', []),
-                is_anonymous=data.get('is_anonymous', True),
-                priority=data.get('priority', 'medium'),
-                status='pending',
-                user=user if user and not data.get('is_anonymous') else None
-            )
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Complaint submitted successfully',
-                'complaint_id': complaint.complaint_id,
-                'status': 'received'
-            }, status=201)
-            
-        except json.JSONDecodeError as e:
-            return JsonResponse({'error': f'Invalid JSON: {str(e)}'}, status=400)
-        except Exception as e:
-            print(f"Error creating complaint: {e}")
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({'error': str(e)}, status=500)
 
 # Get complaint statistics
 @csrf_exempt
@@ -363,7 +363,6 @@ def complaint_stats(request):
         
         return JsonResponse(stats)
     except Exception as e:
-        print(f"Error in complaint_stats: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
 def api_home(request):
@@ -381,17 +380,24 @@ def api_home(request):
         }
     })
 
+# URL Patterns
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', api_home),
     path('api/auth/', include('users.urls')),
+    
+    # Notification endpoints
+    path('api/notifications/', users_views.NotificationListView.as_view(), name='notifications'),
+    path('api/notifications/unread-count/', users_views.UnreadNotificationCountView.as_view(), name='unread-count'),
+    path('api/notifications/<str:notification_id>/read/', users_views.MarkNotificationReadView.as_view(), name='mark-read'),
+    path('api/notifications/mark-all-read/', users_views.MarkAllNotificationsReadView.as_view(), name='mark-all-read'),
+    path('api/notifications/<str:notification_id>/delete/', users_views.DeleteNotificationView.as_view(), name='delete'),
     
     # Complaint endpoints
     path('api/complaints/', complaints_list),
     path('api/complaints/all-complaints/', all_complaints),
     path('api/complaints/my-complaints/', my_complaints),
     path('api/complaints/stats/', complaint_stats),
-    path('api/complaints/<str:complaint_id>/verify/', verify_complaint),
     path('api/complaints/<str:complaint_id>/update-status/', update_complaint_status),
     path('api/complaints/<str:complaint_id>/', complaint_detail),
     

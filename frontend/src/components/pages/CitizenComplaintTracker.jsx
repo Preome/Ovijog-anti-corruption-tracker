@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import API from '../../services/api';
 import { 
   AlertTriangle, Eye, Clock, CheckCircle, XCircle, 
   Search, FileText, MapPin, Calendar, DollarSign,
-  Image, File, ExternalLink, Flag, Filter, ListChecks
+  Image, File, ExternalLink, Flag, Filter, ListChecks,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -17,10 +19,31 @@ function CitizenComplaintTracker() {
   const [filterPriority, setFilterPriority] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const complaintRefs = useRef({});
+
+  const complaintIdFromUrl = searchParams.get('complaint');
 
   useEffect(() => {
     fetchMyComplaints();
   }, []);
+
+  useEffect(() => {
+    // If there's a complaint ID in URL, scroll to it after complaints load
+    if (complaintIdFromUrl && complaints.length > 0) {
+      setTimeout(() => {
+        const element = complaintRefs.current[complaintIdFromUrl];
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('bg-yellow-50', 'border-l-4', 'border-yellow-500', 'shadow-lg');
+          setTimeout(() => {
+            element.classList.remove('bg-yellow-50', 'border-l-4', 'border-yellow-500', 'shadow-lg');
+          }, 3000);
+        }
+      }, 500);
+    }
+  }, [complaints, complaintIdFromUrl]);
 
   const fetchMyComplaints = async () => {
     setLoading(true);
@@ -28,12 +51,29 @@ function CitizenComplaintTracker() {
       const response = await API.get('/complaints/my-complaints/');
       const complaintsData = Array.isArray(response.data) ? response.data : [];
       setComplaints(complaintsData);
+      
+      // Mark notifications as read when viewing complaints
+      if (complaintsData.length > 0) {
+        try {
+          await API.post('/notifications/mark-all-read/');
+        } catch (error) {
+          console.error('Error marking notifications as read:', error);
+        }
+      }
     } catch (error) {
       console.error('Error fetching complaints:', error);
       toast.error('আপনার অভিযোগ লোড করতে ব্যর্থ হয়েছে');
       setComplaints([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleComplaintDetails = (complaintId) => {
+    if (selectedComplaint === complaintId) {
+      setSelectedComplaint(null);
+    } else {
+      setSelectedComplaint(complaintId);
     }
   };
 
@@ -239,6 +279,7 @@ function CitizenComplaintTracker() {
           >
             <Filter className="h-4 w-4" />
             <span className="text-sm font-medium">ফিল্টার করুন</span>
+            {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
           
           {showFilters && (
@@ -359,9 +400,17 @@ function CitizenComplaintTracker() {
         ) : (
           <div className="space-y-4">
             {filteredComplaints.map((complaint) => (
-              <div key={complaint.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition">
-                {/* Complaint Header */}
-                <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center flex-wrap gap-2">
+              <div 
+                key={complaint.id} 
+                ref={el => complaintRefs.current[complaint.complaint_id] = el}
+                id={`complaint-${complaint.complaint_id}`}
+                className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300"
+              >
+                {/* Complaint Header - Clickable to expand/collapse */}
+                <div 
+                  className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center flex-wrap gap-2 cursor-pointer hover:bg-gray-100 transition"
+                  onClick={() => toggleComplaintDetails(complaint.id)}
+                >
                   <div className="flex items-center gap-3 flex-wrap">
                     {getStatusIcon(complaint.status)}
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(complaint.status)}`}>
@@ -372,103 +421,112 @@ function CitizenComplaintTracker() {
                       {getPriorityText(complaint.priority)}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-500">
-                    অভিযোগ আইডি: {complaint.complaint_id}
+                  <div className="flex items-center gap-4">
+                    <div className="text-sm text-gray-500">
+                      অভিযোগ আইডি: {complaint.complaint_id}
+                    </div>
+                    {selectedComplaint === complaint.id ? (
+                      <ChevronUp className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-400" />
+                    )}
                   </div>
                 </div>
 
-                {/* Complaint Body */}
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-gray-500">অফিসের অবস্থান</p>
-                        <p className="font-medium">{complaint.office_location}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Calendar className="h-4 w-4 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-gray-500">ঘটনার তারিখ</p>
-                        <p className="font-medium">
-                          {complaint.incident_date ? new Date(complaint.incident_date).toLocaleDateString('bn-BD') : 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-                    {complaint.amount_requested && (
+                {/* Complaint Body - Expandable */}
+                {selectedComplaint === complaint.id && (
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div className="flex items-start gap-2">
-                        <DollarSign className="h-4 w-4 text-red-500 mt-0.5" />
+                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
                         <div>
-                          <p className="text-sm text-gray-500">দাবিকৃত অর্থ</p>
-                          <p className="font-medium text-red-600">{complaint.amount_requested} টাকা</p>
+                          <p className="text-sm text-gray-500">অফিসের অবস্থান</p>
+                          <p className="font-medium">{complaint.office_location}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Calendar className="h-4 w-4 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">ঘটনার তারিখ</p>
+                          <p className="font-medium">
+                            {complaint.incident_date ? new Date(complaint.incident_date).toLocaleDateString('bn-BD') : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                      {complaint.amount_requested && (
+                        <div className="flex items-start gap-2">
+                          <DollarSign className="h-4 w-4 text-red-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-gray-500">দাবিকৃত অর্থ</p>
+                            <p className="font-medium text-red-600">{complaint.amount_requested} টাকা</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-start gap-2">
+                        <Clock className="h-4 w-4 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">অভিযোগের তারিখ</p>
+                          <p className="font-medium">
+                            {complaint.reported_at ? new Date(complaint.reported_at).toLocaleDateString('bn-BD') : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-500 mb-1">বিবরণ</p>
+                      <p className="text-gray-700">{complaint.description}</p>
+                    </div>
+
+                    {/* Evidence Section */}
+                    {complaint.evidence_documents && complaint.evidence_documents.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-500 mb-2">প্রমাণ দলিল ({complaint.evidence_documents.length})</p>
+                        <div className="flex flex-wrap gap-2">
+                          {complaint.evidence_documents.map((evidence, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => viewEvidence(evidence.url)}
+                              className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg text-sm transition"
+                            >
+                              {evidence.format === 'pdf' ? (
+                                <File className="h-4 w-4 text-red-500" />
+                              ) : (
+                                <Image className="h-4 w-4 text-blue-500" />
+                              )}
+                              <span>{evidence.name || `প্রমাণ ${idx + 1}`}</span>
+                              <ExternalLink className="h-3 w-3 text-gray-500" />
+                            </button>
+                          ))}
                         </div>
                       </div>
                     )}
-                    <div className="flex items-start gap-2">
-                      <Clock className="h-4 w-4 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-gray-500">অভিযোগের তারিখ</p>
-                        <p className="font-medium">
-                          {complaint.reported_at ? new Date(complaint.reported_at).toLocaleDateString('bn-BD') : 'N/A'}
-                        </p>
+
+                    {/* Investigation Notes (if available) */}
+                    {complaint.investigation_notes && (
+                      <div className="mt-4 bg-blue-50 rounded-lg p-4">
+                        <p className="text-sm font-semibold text-blue-800 mb-1">তদন্ত নোট:</p>
+                        <p className="text-sm text-blue-700">{complaint.investigation_notes}</p>
                       </div>
-                    </div>
-                  </div>
+                    )}
 
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-500 mb-1">বিবরণ</p>
-                    <p className="text-gray-700">{complaint.description}</p>
-                  </div>
-
-                  {/* Evidence Section */}
-                  {complaint.evidence_documents && complaint.evidence_documents.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-500 mb-2">প্রমাণ দলিল ({complaint.evidence_documents.length})</p>
-                      <div className="flex flex-wrap gap-2">
-                        {complaint.evidence_documents.map((evidence, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => viewEvidence(evidence.url)}
-                            className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg text-sm transition"
-                          >
-                            {evidence.format === 'pdf' ? (
-                              <File className="h-4 w-4 text-red-500" />
-                            ) : (
-                              <Image className="h-4 w-4 text-blue-500" />
-                            )}
-                            <span>{evidence.name || `প্রমাণ ${idx + 1}`}</span>
-                            <ExternalLink className="h-3 w-3 text-gray-500" />
-                          </button>
-                        ))}
+                    {/* Feedback (if available) */}
+                    {complaint.feedback_to_citizen && (
+                      <div className="mt-3 bg-green-50 rounded-lg p-4">
+                        <p className="text-sm font-semibold text-green-800 mb-1">কর্তৃপক্ষের বার্তা:</p>
+                        <p className="text-sm text-green-700">{complaint.feedback_to_citizen}</p>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Investigation Notes (if available) */}
-                  {complaint.investigation_notes && (
-                    <div className="mt-4 bg-blue-50 rounded-lg p-4">
-                      <p className="text-sm font-semibold text-blue-800 mb-1">তদন্ত নোট:</p>
-                      <p className="text-sm text-blue-700">{complaint.investigation_notes}</p>
-                    </div>
-                  )}
-
-                  {/* Feedback (if available) */}
-                  {complaint.feedback_to_citizen && (
-                    <div className="mt-3 bg-green-50 rounded-lg p-4">
-                      <p className="text-sm font-semibold text-green-800 mb-1">কর্তৃপক্ষের বার্তা:</p>
-                      <p className="text-sm text-green-700">{complaint.feedback_to_citizen}</p>
-                    </div>
-                  )}
-
-                  {/* Action Taken (if available) */}
-                  {complaint.action_taken && (
-                    <div className="mt-3 bg-purple-50 rounded-lg p-4">
-                      <p className="text-sm font-semibold text-purple-800 mb-1">গৃহীত ব্যবস্থা:</p>
-                      <p className="text-sm text-purple-700">{complaint.action_taken}</p>
-                    </div>
-                  )}
-                </div>
+                    {/* Action Taken (if available) */}
+                    {complaint.action_taken && (
+                      <div className="mt-3 bg-purple-50 rounded-lg p-4">
+                        <p className="text-sm font-semibold text-purple-800 mb-1">গৃহীত ব্যবস্থা:</p>
+                        <p className="text-sm text-purple-700">{complaint.action_taken}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

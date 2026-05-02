@@ -30,7 +30,6 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='citizen')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     
-    # NID (National ID) - 10 or 17 digits
     nid = models.CharField(
         max_length=20,
         unique=True,
@@ -39,7 +38,6 @@ class User(AbstractUser):
         validators=[RegexValidator(r'^\d{10}$|^\d{17}$', 'NID must be 10 or 17 digits')]
     )
     
-    # Phone number
     phone_regex = RegexValidator(
         regex=r'^01[3-9]\d{8}$',
         message='Phone number must be valid Bangladeshi number (e.g., 017XXXXXXXX)'
@@ -52,23 +50,18 @@ class User(AbstractUser):
         blank=True
     )
     
-    # Additional fields
     full_name_bn = models.CharField(max_length=200, blank=True, verbose_name='পূর্ণ নাম (বাংলা)')
     office_name = models.CharField(max_length=255, blank=True, verbose_name='অফিসের নাম')
     designation = models.CharField(max_length=255, blank=True, verbose_name='পদবি')
     
-    # Department for officers
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='officers')
     
-    # Email verification with OTP (No link system)
     email_verified = models.BooleanField(default=False)
     
-    # OTP fields for email verification
     otp_code = models.CharField(max_length=6, blank=True, null=True)
     otp_created_at = models.DateTimeField(blank=True, null=True)
     otp_attempts = models.IntegerField(default=0)
     
-    # Account approval
     approved_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_users')
     approved_at = models.DateTimeField(blank=True, null=True)
     rejection_reason = models.TextField(blank=True)
@@ -95,3 +88,46 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username}'s profile"
+
+# Notification Model
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('complaint_status', 'Complaint Status Change'),
+        ('complaint_verified', 'Complaint Verified'),
+        ('complaint_resolved', 'Complaint Resolved'),
+        ('complaint_rejected', 'Complaint Rejected'),
+        ('officer_response', 'Officer Response'),
+        ('system', 'System Notification'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    complaint_id = models.CharField(max_length=50, blank=True, null=True)
+    
+    is_read = models.BooleanField(default=False)
+    is_email_sent = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.title} - {self.user.username}"
+    
+    def mark_as_read(self):
+        from django.utils import timezone
+        self.is_read = True
+        self.read_at = timezone.now()
+        self.save()

@@ -10,6 +10,7 @@ import ProfilePage from './components/pages/ProfilePage';
 import CitizenComplaintTracker from './components/pages/CitizenComplaintTracker';
 import AdminApprovalPage from './components/pages/AdminApprovalPage';
 import OTPVerificationPage from './components/pages/OTPVerificationPage';
+import NotificationBell from './components/NotificationBell';
 
 // Role-Based Navigation Component
 function Navbar() {
@@ -79,8 +80,13 @@ function Navbar() {
               </Link>
             ))}
             
-            {isAuthenticated ? (
+            {isAuthenticated && (
               <div className="flex items-center space-x-4 ml-4 border-l pl-4">
+                {/* Notification Bell - Only for citizens (since they receive notifications) */}
+                {(user?.role === 'citizen') && (
+                  <NotificationBell />
+                )}
+                
                 <Link to="/profile" className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition">
                   <User className="h-4 w-4" />
                   প্রোফাইল
@@ -93,7 +99,9 @@ function Navbar() {
                   লগআউট
                 </button>
               </div>
-            ) : (
+            )}
+            
+            {!isAuthenticated && (
               <div className="flex items-center space-x-4 ml-4 border-l pl-4">
                 <Link to="/login" className="text-gray-700 hover:text-blue-600 transition">
                   লগইন
@@ -108,7 +116,11 @@ function Navbar() {
             )}
           </div>
           
-          <div className="md:hidden">
+          {/* Mobile Menu */}
+          <div className="md:hidden flex items-center gap-2">
+            {isAuthenticated && (user?.role === 'citizen') && (
+              <NotificationBell />
+            )}
             <details className="dropdown">
               <summary className="btn btn-ghost btn-circle">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

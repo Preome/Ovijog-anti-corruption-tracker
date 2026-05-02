@@ -7,7 +7,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Q
-from .models import User, Department
+from .models import User, Department, Notification
 from .serializers import (
     RegisterSerializer, LoginSerializer, UserSerializer, 
     ChangePasswordSerializer, ApproveUserSerializer, DepartmentSerializer
@@ -15,6 +15,9 @@ from .serializers import (
 import uuid
 import random
 from datetime import timedelta
+from .models import Notification
+from .serializers import NotificationSerializer
+
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -480,3 +483,50 @@ class DeleteUserView(generics.DestroyAPIView):
             })
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class NotificationListView(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = NotificationSerializer
+    
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user).order_by('-created_at')[:50]
+
+class UnreadNotificationCountView(generics.GenericAPIView):
+    permission_classes = (IsAuthenticated,)
+    
+    def get(self, request):
+        count = Notification.objects.filter(user=request.user, is_read=False).count()
+        return Response({'count': count})
+
+class MarkNotificationReadView(generics.GenericAPIView):
+    permission_classes = (IsAuthenticated,)
+    
+    def post(self, request, notification_id):
+        try:
+            notification = Notification.objects.get(id=notification_id, user=request.user)
+            notification.mark_as_read()
+            return Response({'success': True, 'message': 'Notification marked as read'})
+        except Notification.DoesNotExist:
+            return Response({'error': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class MarkAllNotificationsReadView(generics.GenericAPIView):
+    permission_classes = (IsAuthenticated,)
+    
+    def post(self, request):
+        updated = Notification.objects.filter(user=request.user, is_read=False).update(
+            is_read=True, 
+            read_at=timezone.now()
+        )
+        return Response({'success': True, 'message': f'{updated} notifications marked as read'})
+
+class DeleteNotificationView(generics.DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    
+    def delete(self, request, notification_id):
+        try:
+            notification = Notification.objects.get(id=notification_id, user=request.user)
+            notification.delete()
+            return Response({'success': True, 'message': 'Notification deleted'})
+        except Notification.DoesNotExist:
+            return Response({'error': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)
