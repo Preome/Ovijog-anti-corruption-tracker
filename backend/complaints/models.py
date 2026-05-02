@@ -61,7 +61,7 @@ class Complaint(models.Model):
         
         # Set legal deadline (e.g., 15 days from reported date)
         if not self.legal_deadline and self.reported_at:
-            self.legal_deadline = self.reported_at + timedelta(days=15)
+            self.legal_deadline = self.reported_at + timedelta(days=1)
         
         super().save(*args, **kwargs)
     
