@@ -1,5 +1,6 @@
 from django.db import models
 import uuid
+from users.models import User  # Add this import
 
 class Complaint(models.Model):
     STATUS_CHOICES = [
@@ -31,10 +32,13 @@ class Complaint(models.Model):
     reported_at = models.DateTimeField(auto_now_add=True)
     is_anonymous = models.BooleanField(default=True)
     
-    # New fields for complaint management
+    # Add this ForeignKey to User
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='complaints')
+    
+    # Complaint management fields
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
-    assigned_to = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_complaints')
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_complaints')
     investigation_notes = models.TextField(blank=True)
     action_taken = models.TextField(blank=True)
     resolution_date = models.DateTimeField(null=True, blank=True)
