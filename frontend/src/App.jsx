@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Shield, LayoutDashboard, AlertTriangle, LogOut, User, ListChecks, Users, CheckCircle } from 'lucide-react';
+import { Shield, LayoutDashboard, AlertTriangle, LogOut, User, ListChecks, Users, CheckCircle, Globe } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ComplaintPage from './components/pages/ComplaintPage';
 import Dashboard from './components/pages/Dashboard';
@@ -11,6 +11,7 @@ import CitizenComplaintTracker from './components/pages/CitizenComplaintTracker'
 import AdminApprovalPage from './components/pages/AdminApprovalPage';
 import OTPVerificationPage from './components/pages/OTPVerificationPage';
 import NotificationBell from './components/NotificationBell';
+import PublicPressureBoard from './components/pages/PublicPressureBoard';
 
 // Role-Based Navigation Component
 function Navbar() {
@@ -21,12 +22,14 @@ function Navbar() {
     { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
     { path: '/complaint', label: 'অভিযোগ', icon: <AlertTriangle className="h-4 w-4" /> },
     { path: '/my-complaints', label: 'আমার অভিযোগ', icon: <ListChecks className="h-4 w-4" /> },
+    { path: '/public-pressure', label: 'পাবলিক প্রেশার', icon: <Globe className="h-4 w-4" /> },
   ];
   
   // Officer Navigation Items
   const officerNavItems = [
     { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
     { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
+    { path: '/public-pressure', label: 'পাবলিক প্রেশার', icon: <Globe className="h-4 w-4" /> },
   ];
   
   // Admin Navigation Items
@@ -34,11 +37,15 @@ function Navbar() {
     { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
     { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
     { path: '/admin/approvals', label: 'অ্যাপ্রুভাল', icon: <Users className="h-4 w-4" /> },
+    { path: '/public-pressure', label: 'পাবলিক প্রেশার', icon: <Globe className="h-4 w-4" /> },
   ];
   
   const getNavItems = () => {
     if (!isAuthenticated) {
-      return [{ path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> }];
+      return [
+        { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
+        { path: '/public-pressure', label: 'পাবলিক প্রেশার', icon: <Globe className="h-4 w-4" /> },
+      ];
     }
     
     if (user?.role === 'admin') {
@@ -211,7 +218,7 @@ function MainHomePage() {
             আমাদের সেবাসমূহ
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
               <div className="text-red-600 text-5xl mb-4">⚠️</div>
               <h3 className="text-xl font-bold text-gray-800 mb-3">গোপন অভিযোগ</h3>
@@ -226,6 +233,11 @@ function MainHomePage() {
               <div className="text-green-600 text-5xl mb-4">🔒</div>
               <h3 className="text-xl font-bold text-gray-800 mb-3">গোপনীয়তা সুরক্ষা</h3>
               <p className="text-gray-600">আপনার তথ্য সম্পূর্ণ সুরক্ষিত ও গোপন থাকবে</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
+              <div className="text-orange-600 text-5xl mb-4">🌍</div>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">পাবলিক প্রেশার</h3>
+              <p className="text-gray-600">বিলম্বিত অভিযোগ পাবলিক করে দ্রুত সমাধান ত্বরান্বিত করুন</p>
             </div>
           </div>
         </div>
@@ -250,23 +262,32 @@ function CitizenHomePage() {
             দুর্নীতি রিপোর্টিং সিস্টেমে আপনাকে স্বাগতম
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
             <Link 
               to="/complaint" 
-              className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition transform hover:scale-105"
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105"
             >
-              <div className="text-red-600 text-5xl mb-3">⚠️</div>
-              <h3 className="text-xl font-bold mb-2">নতুন অভিযোগ</h3>
-              <p className="text-gray-600">দুর্নীতির অভিযোগ জানান</p>
+              <div className="text-red-600 text-4xl mb-3">⚠️</div>
+              <h3 className="text-lg font-bold mb-1">নতুন অভিযোগ</h3>
+              <p className="text-sm text-gray-600">দুর্নীতির অভিযোগ জানান</p>
             </Link>
 
             <Link 
               to="/my-complaints" 
-              className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition transform hover:scale-105"
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105"
             >
-              <div className="text-purple-600 text-5xl mb-3">📋</div>
-              <h3 className="text-xl font-bold mb-2">আমার অভিযোগ</h3>
-              <p className="text-gray-600">আপনার অভিযোগের অবস্থা দেখুন</p>
+              <div className="text-purple-600 text-4xl mb-3">📋</div>
+              <h3 className="text-lg font-bold mb-1">আমার অভিযোগ</h3>
+              <p className="text-sm text-gray-600">আপনার অভিযোগের অবস্থা দেখুন</p>
+            </Link>
+
+            <Link 
+              to="/public-pressure" 
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105"
+            >
+              <div className="text-orange-600 text-4xl mb-3">🌍</div>
+              <h3 className="text-lg font-bold mb-1">পাবলিক প্রেশার</h3>
+              <p className="text-sm text-gray-600">বিলম্বিত অভিযোগ দেখুন ও সমর্থন দিন</p>
             </Link>
           </div>
         </div>
@@ -309,12 +330,20 @@ function OfficerHomePage() {
             আপনি শুধুমাত্র আপনার বিভাগের সাথে সম্পর্কিত অভিযোগ দেখতে পাবেন
           </p>
           
-          <Link 
-            to="/dashboard" 
-            className="inline-block bg-purple-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-purple-700 transition"
-          >
-            কর্মকর্তা ড্যাশবোর্ডে যান
-          </Link>
+          <div className="flex justify-center gap-4">
+            <Link 
+              to="/dashboard" 
+              className="inline-block bg-purple-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-purple-700 transition"
+            >
+              কর্মকর্তা ড্যাশবোর্ডে যান
+            </Link>
+            <Link 
+              to="/public-pressure" 
+              className="inline-block bg-orange-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-orange-700 transition"
+            >
+              পাবলিক প্রেশার বোর্ড
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -337,7 +366,7 @@ function AdminHomePage() {
             অ্যাডমিন প্যানেলে আপনাকে স্বাগতম
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
             <Link 
               to="/dashboard" 
               className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
@@ -354,6 +383,15 @@ function AdminHomePage() {
               <div className="text-green-600 text-4xl mb-3">✅</div>
               <h3 className="text-lg font-bold mb-1">অ্যাপ্রুভাল</h3>
               <p className="text-sm text-gray-600">নতুন অফিসার অ্যাকাউন্ট অনুমোদন করুন</p>
+            </Link>
+
+            <Link 
+              to="/public-pressure" 
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
+            >
+              <div className="text-orange-600 text-4xl mb-3">🌍</div>
+              <h3 className="text-lg font-bold mb-1">পাবলিক প্রেশার</h3>
+              <p className="text-sm text-gray-600">পাবলিক অভিযোগ দেখুন</p>
             </Link>
           </div>
         </div>
@@ -450,6 +488,13 @@ function AppContent() {
           <Route path="/admin/approvals" element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminApprovalPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Public Pressure Board - Accessible to all authenticated users */}
+          <Route path="/public-pressure" element={
+            <ProtectedRoute allowedRoles={['citizen', 'officer', 'admin']}>
+              <PublicPressureBoard />
             </ProtectedRoute>
           } />
           

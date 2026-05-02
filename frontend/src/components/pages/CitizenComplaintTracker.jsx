@@ -6,7 +6,7 @@ import {
   AlertTriangle, Eye, Clock, CheckCircle, XCircle, 
   Search, FileText, MapPin, Calendar, DollarSign,
   Image, File, ExternalLink, Flag, Filter, ListChecks,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Globe, ThumbsUp
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -19,6 +19,7 @@ function CitizenComplaintTracker() {
   const [filterPriority, setFilterPriority] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [makingPublic, setMakingPublic] = useState({});
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const complaintRefs = useRef({});
@@ -66,6 +67,21 @@ function CitizenComplaintTracker() {
       setComplaints([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const makeComplaintPublic = async (complaintId) => {
+    setMakingPublic(prev => ({ ...prev, [complaintId]: true }));
+    try {
+      const response = await API.post(`/complaints/${complaintId}/make-public/`);
+      if (response.data.success) {
+        toast.success('অভিযোগ পাবলিক করা হয়েছে!');
+        fetchMyComplaints(); // Refresh list
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'পাবলিক করতে ব্যর্থ হয়েছে');
+    } finally {
+      setMakingPublic(prev => ({ ...prev, [complaintId]: false }));
     }
   };
 
@@ -404,11 +420,13 @@ function CitizenComplaintTracker() {
                 key={complaint.id} 
                 ref={el => complaintRefs.current[complaint.complaint_id] = el}
                 id={`complaint-${complaint.complaint_id}`}
-                className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300"
+                className={`bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 ${complaint.is_public ? 'border-2 border-red-500' : ''}`}
               >
                 {/* Complaint Header - Clickable to expand/collapse */}
                 <div 
-                  className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center flex-wrap gap-2 cursor-pointer hover:bg-gray-100 transition"
+                  className={`px-6 py-4 border-b flex justify-between items-center flex-wrap gap-2 cursor-pointer transition ${
+                    complaint.is_public ? 'bg-red-50 hover:bg-red-100' : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
                   onClick={() => toggleComplaintDetails(complaint.id)}
                 >
                   <div className="flex items-center gap-3 flex-wrap">
@@ -420,6 +438,12 @@ function CitizenComplaintTracker() {
                       {getPriorityIcon(complaint.priority)}
                       {getPriorityText(complaint.priority)}
                     </span>
+                    {complaint.is_public && (
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 flex items-center gap-1">
+                        <Globe className="h-3 w-3" />
+                        পাবলিক
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-sm text-gray-500">
@@ -477,6 +501,44 @@ function CitizenComplaintTracker() {
                       <p className="text-sm text-gray-500 mb-1">বিবরণ</p>
                       <p className="text-gray-700">{complaint.description}</p>
                     </div>
+
+                    {/* Public Pressure Warning */}
+                    {!complaint.is_public && complaint.days_remaining !== undefined && complaint.days_remaining <= 3 && (
+                      <div className="mb-4 bg-orange-50 border-l-4 border-orange-500 p-3 rounded">
+                        <p className="text-sm text-orange-700">
+                          ⚠️ এই অভিযোগের নিষ্পত্তির সময়সীমা {complaint.days_remaining} দিন বাকি। সময়সীমা অতিক্রম করলে আপনি অভিযোগটি পাবলিক করতে পারবেন।
+                        </p>
+                      </div>
+                    )}
+
+                    {!complaint.is_public && complaint.days_overdue > 0 && (
+                      <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                        <p className="text-sm text-red-700 font-semibold mb-2">
+                          ⚠️ এই অভিযোগটি {complaint.days_overdue} দিন বিলম্বিত হয়েছে!
+                        </p>
+                        <button
+                          onClick={() => makeComplaintPublic(complaint.complaint_id)}
+                          disabled={makingPublic[complaint.complaint_id]}
+                          className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition text-sm"
+                        >
+                          <Globe className="h-4 w-4" />
+                          {makingPublic[complaint.complaint_id] ? 'পাবলিক করা হচ্ছে...' : 'এখনই পাবলিক করুন'}
+                        </button>
+                      </div>
+                    )}
+
+                    {complaint.is_public && (
+                      <div className="mb-4 bg-green-50 border-l-4 border-green-500 p-3 rounded">
+                        <p className="text-sm text-green-700 flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          এই অভিযোগটি পাবলিক করা হয়েছে। সাধারণ মানুষ এটিতে সমর্থন জানাতে পারবেন, যা দ্রুত নিষ্পত্তিতে সহায়তা করবে।
+                        </p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <ThumbsUp className="h-4 w-4 text-green-600" />
+                          <span className="text-sm text-green-600">{complaint.upvotes_count || 0} জন সমর্থন দিয়েছেন</span>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Evidence Section */}
                     {complaint.evidence_documents && complaint.evidence_documents.length > 0 && (

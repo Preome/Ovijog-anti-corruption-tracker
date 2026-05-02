@@ -8,6 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 from complaints.models import Complaint
 from users.models import User, Notification
 from users import views as users_views
+from django.utils import timezone
+
 
 # Helper function to get user from JWT token
 def get_user_from_request(request):
@@ -43,7 +45,14 @@ def complaint_to_dict(complaint):
         'feedback_to_citizen': complaint.feedback_to_citizen,
         'reported_at': complaint.reported_at.isoformat() if complaint.reported_at else None,
         'updated_at': complaint.updated_at.isoformat() if hasattr(complaint, 'updated_at') and complaint.updated_at else None,
-        'user_id': str(complaint.user.id) if complaint.user and not complaint.is_anonymous else None,  # Hide for anonymous
+        'user_id': str(complaint.user.id) if complaint.user else None,
+        # Add these Public Pressure Mode fields
+        'days_overdue': complaint.days_overdue(),
+        'can_be_public': complaint.can_be_public(),
+        'is_public': complaint.is_public,
+        'legal_deadline': complaint.legal_deadline.isoformat() if complaint.legal_deadline else None,
+        'upvotes_count': complaint.upvotes_count,
+        'days_remaining': complaint.days_remaining(),
     }
 
 # Get all complaints (for officers - filtered by department)
@@ -365,6 +374,94 @@ def complaint_stats(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
+# Make complaint public
+@csrf_exempt
+def make_complaint_public(request, complaint_id):
+    from django.utils import timezone  # Add this import inside the function
+    user = get_user_from_request(request)
+    
+    if not user:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        complaint = Complaint.objects.get(complaint_id=complaint_id)
+        
+        # Verify user owns the complaint
+        if complaint.user != user:
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
+        
+        # Check if eligible for public mode
+        if not complaint.can_be_public():
+            remaining_days = complaint.days_remaining()
+            return JsonResponse({
+                'error': f'Complaint not eligible for public mode. {remaining_days} days remaining until deadline.',
+                'remaining_days': remaining_days
+            }, status=400)
+        
+        complaint.is_public = True
+        complaint.public_activated_at = timezone.now()
+        complaint.save()
+        
+        # Create notification for officers
+        from users.models import Notification, User
+        officers = User.objects.filter(role='officer')
+        for officer in officers:
+            Notification.objects.create(
+                user=officer,
+                notification_type='system',
+                title='জনতার চাপ - অভিযোগ পাবলিক হয়েছে',
+                message=f'অভিযোগ {complaint.complaint_id} পাবলিক করা হয়েছে। দয়া করে দ্রুত ব্যবস্থা নিন।',
+                priority='high',
+                complaint_id=complaint.complaint_id
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Complaint is now public',
+            'public_url': f'/public-pressure/{complaint.complaint_id}'
+        })
+    except Complaint.DoesNotExist:
+        return JsonResponse({'error': 'Complaint not found'}, status=404)
+    except Exception as e:
+        print(f"Error in make_complaint_public: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+# Get public complaints (Public Pressure Board)
+@csrf_exempt
+def public_complaints(request):
+    complaints = Complaint.objects.filter(is_public=True).order_by('-public_activated_at')
+    complaints_data = []
+    for c in complaints:
+        complaints_data.append({
+            'complaint_id': c.complaint_id,
+            'office_location': c.office_location,
+            'service_type': c.service_type,
+            'description': c.description[:200],  # Truncated for public view
+            'days_overdue': c.days_overdue(),
+            'status': c.status,
+            'public_activated_at': c.public_activated_at.isoformat() if c.public_activated_at else None,
+            'upvotes': getattr(c, 'upvotes_count', 0)
+        })
+    return JsonResponse(complaints_data, safe=False)
+
+# Upvote public complaint (public pressure)
+@csrf_exempt
+def upvote_public_complaint(request, complaint_id):
+    try:
+        complaint = Complaint.objects.get(complaint_id=complaint_id)
+        
+        # Simple upvote system (you can implement more sophisticated)
+        if not hasattr(complaint, 'upvotes_count'):
+            complaint.upvotes_count = 0
+        complaint.upvotes_count += 1
+        complaint.save()
+        
+        return JsonResponse({
+            'success': True,
+            'upvotes': complaint.upvotes_count
+        })
+    except Complaint.DoesNotExist:
+        return JsonResponse({'error': 'Complaint not found'}, status=404)
 def api_home(request):
     return JsonResponse({
         'message': 'Anti-Corruption Digital Service Tracker API',
@@ -400,6 +497,9 @@ urlpatterns = [
     path('api/complaints/stats/', complaint_stats),
     path('api/complaints/<str:complaint_id>/update-status/', update_complaint_status),
     path('api/complaints/<str:complaint_id>/', complaint_detail),
+    path('api/complaints/<str:complaint_id>/make-public/', make_complaint_public),
+    path('api/public-complaints/', public_complaints),
+    path('api/public-complaints/<str:complaint_id>/upvote/', upvote_public_complaint),
     
     # Dashboard stats
     path('api/dashboard/admin-stats/', admin_stats),
