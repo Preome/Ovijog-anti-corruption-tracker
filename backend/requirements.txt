@@ -1,35 +1,15 @@
-# Django and REST Framework
 Django==4.2.30
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
 django-cors-headers==4.4.0
 django-filter==24.3
-
-# Database
 psycopg2-binary==2.9.10
 dj-database-url==2.2.0
-
-# Environment & Utilities
 python-dotenv==1.0.1
 whitenoise==6.7.0
 Pillow==10.4.0
-
-# JWT & Auth
 PyJWT==2.9.0
-
-# Email & Notifications
-django-celery-results==2.5.1
-
-# Cloud Storage
 cloudinary==1.36.0
-
-# Timezone & Internationalization
-pytz==2024.2
-tzdata==2024.2
-
-# Production Server
 gunicorn==22.0.0
-
-# Others
 requests==2.32.3
 urllib3==2.2.3
