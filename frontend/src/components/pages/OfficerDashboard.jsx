@@ -5,7 +5,7 @@ import {
   FileText, AlertTriangle, Clock, CheckCircle, Eye, 
   Filter, Download, TrendingUp, Flag, Image, File,
   Search, X, ChevronDown, Shield, Building, Calendar, Video,
-  Phone, MessageCircle, ExternalLink
+  Phone, MessageCircle, ExternalLink, Play, Volume2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ComplaintManagement from './ComplaintManagement';
@@ -55,7 +55,6 @@ function OfficerDashboard() {
       const complaintsData = Array.isArray(complaintsRes.data) ? complaintsRes.data : [];
       let hearingsData = [];
       
-      // Handle paginated response for hearings
       if (hearingsRes.data && hearingsRes.data.results && Array.isArray(hearingsRes.data.results)) {
         hearingsData = hearingsRes.data.results;
       } else if (Array.isArray(hearingsRes.data)) {
@@ -76,11 +75,9 @@ function OfficerDashboard() {
       const medium = complaintsData.filter(c => c.priority === 'medium').length;
       const low = complaintsData.filter(c => c.priority === 'low').length;
       
-      // Hearing stats
       const upcomingHearings = hearingsData.filter(h => h.status === 'scheduled').length;
       const completedHearings = hearingsData.filter(h => h.status === 'completed').length;
       
-      // Calculate hotspots
       const hotspots = {};
       complaintsData.forEach(complaint => {
         const location = complaint.office_location;
@@ -225,6 +222,62 @@ function OfficerDashboard() {
     }
   };
 
+  const getEvidenceDisplay = (evidence, idx) => {
+    const isVideo = evidence.resource_type === 'video' || evidence.file_type?.startsWith('video/');
+    const isAudio = evidence.resource_type === 'audio' || evidence.file_type?.startsWith('audio/');
+    const isPDF = evidence.format === 'pdf';
+    const isImage = !isVideo && !isAudio && !isPDF;
+
+    if (isVideo) {
+      return (
+        <div key={idx} className="relative group">
+          <video 
+            src={evidence.url} 
+            className="h-20 w-32 object-cover rounded-lg cursor-pointer"
+            onClick={() => viewEvidence(evidence.url)}
+          />
+          <div className="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+            <Play className="h-8 w-8 text-white" />
+          </div>
+          <p className="text-xs text-gray-500 mt-1 truncate w-32">{evidence.name || 'ভিডিও ফাইল'}</p>
+        </div>
+      );
+    } else if (isAudio) {
+      return (
+        <div key={idx} className="bg-gray-100 rounded-lg p-2 w-48">
+          <audio controls className="w-full h-8">
+            <source src={evidence.url} />
+          </audio>
+          <p className="text-xs text-gray-500 mt-1 truncate">{evidence.name || 'অডিও রেকর্ডিং'}</p>
+        </div>
+      );
+    } else if (isPDF) {
+      return (
+        <button
+          key={idx}
+          onClick={() => viewEvidence(evidence.url)}
+          className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-sm transition"
+        >
+          <File className="h-4 w-4 text-red-500" />
+          <span className="text-gray-700">{evidence.name || `ফাইল ${idx + 1}`}</span>
+          <Eye className="h-3 w-3 text-gray-500" />
+        </button>
+      );
+    } else {
+      return (
+        <button
+          key={idx}
+          onClick={() => viewEvidence(evidence.url)}
+          className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-sm transition"
+        >
+          <Image className="h-4 w-4 text-blue-500" />
+          <span className="text-gray-700">{evidence.name || `ফাইল ${idx + 1}`}</span>
+          <Eye className="h-3 w-3 text-gray-500" />
+        </button>
+      );
+    }
+  };
+
   const formatDateTime = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString('bn-BD', {
@@ -288,9 +341,12 @@ function OfficerDashboard() {
               <div className="flex items-center gap-2 mt-2 bg-purple-700 rounded-lg px-3 py-1 inline-flex">
                 <Building className="h-4 w-4 text-purple-200" />
                 <span className="text-purple-100 text-sm">
-                  
+                  আপনার বিভাগ: {getDepartmentDisplay()}
                 </span>
               </div>
+              <p className="text-purple-100 mt-2 text-sm">
+                আপনি শুধুমাত্র আপনার বিভাগের সাথে সম্পর্কিত অভিযোগ দেখতে পাবেন
+              </p>
             </div>
             <button
               onClick={() => setShowStats(!showStats)}
@@ -344,6 +400,67 @@ function OfficerDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Detailed Stats Section */}
+        {showStats && (
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 className="text-xl font-bold mb-4">বিস্তারিত পরিসংখ্যান</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <h3 className="font-semibold mb-2 text-gray-700">অভিযোগের অবস্থা</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>বিবেচনাধীন</span>
+                    <span className="font-semibold">{stats.pending_complaints}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>তদন্তাধীন</span>
+                    <span className="font-semibold">{stats.under_investigation}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>নিষ্পত্তি হয়েছে</span>
+                    <span className="font-semibold">{stats.resolved_complaints}</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2 text-gray-700">প্রায়োরিটি ভিত্তিক</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>জরুরি</span>
+                    <span className="font-semibold text-red-600">{stats.urgent_complaints}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>উচ্চ</span>
+                    <span className="font-semibold text-orange-600">{stats.high_priority}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>মধ্যম</span>
+                    <span className="font-semibold text-blue-600">{stats.medium_priority}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>নিম্ন</span>
+                    <span className="font-semibold text-gray-600">{stats.low_priority}</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2 text-gray-700">দুর্নীতির হটস্পট</h3>
+                <div className="space-y-2">
+                  {stats.corruption_hotspots?.map((spot, idx) => (
+                    <div key={idx} className="flex justify-between text-sm">
+                      <span className="truncate max-w-[150px]">{spot.location}</span>
+                      <span className="font-semibold text-red-600">{spot.count} টি</span>
+                    </div>
+                  ))}
+                  {stats.corruption_hotspots?.length === 0 && (
+                    <p className="text-gray-500 text-sm">কোনো ডেটা নেই</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -449,25 +566,12 @@ function OfficerDashboard() {
                             )}
                           </div>
                           
+                          {/* Enhanced Evidence Section */}
                           {complaint.evidence_documents && complaint.evidence_documents.length > 0 && (
                             <div className="mt-3">
                               <p className="text-sm font-semibold text-gray-700 mb-2">প্রমাণ দলিল ({complaint.evidence_documents.length}):</p>
-                              <div className="flex flex-wrap gap-2">
-                                {complaint.evidence_documents.map((evidence, idx) => (
-                                  <button
-                                    key={idx}
-                                    onClick={() => viewEvidence(evidence.url)}
-                                    className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-sm transition"
-                                  >
-                                    {evidence.format === 'pdf' ? (
-                                      <File className="h-4 w-4 text-red-500" />
-                                    ) : (
-                                      <Image className="h-4 w-4 text-blue-500" />
-                                    )}
-                                    <span className="text-gray-700">{evidence.name || `ফাইল ${idx + 1}`}</span>
-                                    <Eye className="h-3 w-3 text-gray-500" />
-                                  </button>
-                                ))}
+                              <div className="flex flex-wrap gap-3">
+                                {complaint.evidence_documents.map((evidence, idx) => getEvidenceDisplay(evidence, idx))}
                               </div>
                             </div>
                           )}
