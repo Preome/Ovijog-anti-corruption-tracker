@@ -208,7 +208,7 @@ function OfficerDashboard() {
               <div className="flex items-center gap-2 mt-2 bg-purple-700 rounded-lg px-3 py-1 inline-flex">
                 <Building className="h-4 w-4 text-purple-200" />
                 <span className="text-purple-100 text-sm">
-                  আপনার বিভাগ: {getDepartmentDisplay()}
+                  
                 </span>
               </div>
               <p className="text-purple-100 mt-2 text-sm">

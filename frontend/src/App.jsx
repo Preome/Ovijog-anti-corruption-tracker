@@ -26,14 +26,14 @@ function Navbar() {
     { path: '/my-complaints', label: 'আমার অভিযোগ', icon: <ListChecks className="h-4 w-4" /> },
     { path: '/my-hearings', label: 'আমার শুনানি', icon: <Video className="h-4 w-4" /> },
     { path: '/trust-score', label: 'ট্রাস্ট স্কোর', icon: <Star className="h-4 w-4" /> },
-    { path: '/public-pressure', label: 'পাবলিক প্রেশার', icon: <Globe className="h-4 w-4" /> },
+    { path: '/public-pressure', label: 'জনতার কণ্ঠ', icon: <Globe className="h-4 w-4" /> },
   ];
   
   // Officer Navigation Items
   const officerNavItems = [
     { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
     { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { path: '/public-pressure', label: 'পাবলিক প্রেশার', icon: <Globe className="h-4 w-4" /> },
+    { path: '/public-pressure', label: 'জনতার কণ্ঠ', icon: <Globe className="h-4 w-4" /> },
   ];
   
   // Admin Navigation Items
@@ -41,14 +41,14 @@ function Navbar() {
     { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
     { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
     { path: '/admin/approvals', label: 'অ্যাপ্রুভাল', icon: <Users className="h-4 w-4" /> },
-    { path: '/public-pressure', label: 'পাবলিক প্রেশার', icon: <Globe className="h-4 w-4" /> },
+    { path: '/public-pressure', label: 'জনতার কণ্ঠ', icon: <Globe className="h-4 w-4" /> },
   ];
   
   const getNavItems = () => {
     if (!isAuthenticated) {
       return [
         { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
-        { path: '/public-pressure', label: 'পাবলিক প্রেশার', icon: <Globe className="h-4 w-4" /> },
+        { path: '/public-pressure', label: 'জনতার কণ্ঠ', icon: <Globe className="h-4 w-4" /> },
       ];
     }
     
@@ -93,7 +93,6 @@ function Navbar() {
             
             {isAuthenticated && (
               <div className="flex items-center space-x-4 ml-4 border-l pl-4">
-                {/* Notification Bell - Only for citizens (since they receive notifications) */}
                 {(user?.role === 'citizen') && (
                   <NotificationBell />
                 )}
@@ -127,7 +126,6 @@ function Navbar() {
             )}
           </div>
           
-          {/* Mobile Menu */}
           <div className="md:hidden flex items-center gap-2">
             {isAuthenticated && (user?.role === 'citizen') && (
               <NotificationBell />
@@ -222,27 +220,125 @@ function MainHomePage() {
             আমাদের সেবাসমূহ
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-              <div className="text-red-600 text-5xl mb-4">⚠️</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">গোপন অভিযোগ</h3>
-              <p className="text-gray-600">নাম না জানিয়ে দুর্নীতির অভিযোগ জানান। আপনার পরিচয় সম্পূর্ণ গোপন থাকবে।</p>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            {/* Service 1 - Anonymous Complaint */}
+            <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition transform hover:scale-105">
+              <div className="text-red-600 text-4xl mb-3">⚠️</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">গোপন অভিযোগ</h3>
+              <p className="text-sm text-gray-600">নাম না জানিয়ে দুর্নীতির অভিযোগ জানান। আপনার পরিচয় সম্পূর্ণ গোপন থাকবে।</p>
             </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-              <div className="text-purple-600 text-5xl mb-4">📊</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">স্বচ্ছতা ড্যাশবোর্ড</h3>
-              <p className="text-gray-600">সকল অভিযোগের অবস্থা ও পরিসংখ্যান দেখুন</p>
+
+            {/* Service 2 - Public Pressure Board */}
+            <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition transform hover:scale-105">
+              <div className="text-orange-600 text-4xl mb-3">🌍</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">জনতার কণ্ঠ</h3>
+              <p className="text-sm text-gray-600">বিলম্বিত অভিযোগ পাবলিক করে দ্রুত সমাধান ত্বরান্বিত করুন</p>
             </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-              <div className="text-green-600 text-5xl mb-4">🔒</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">গোপনীয়তা সুরক্ষা</h3>
-              <p className="text-gray-600">আপনার তথ্য সম্পূর্ণ সুরক্ষিত ও গোপন থাকবে</p>
+
+            {/* Service 3 - Digital Hearing */}
+            <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition transform hover:scale-105">
+              <div className="text-blue-600 text-4xl mb-3">🎥</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">ডিজিটাল শুনানি</h3>
+              <p className="text-sm text-gray-600">অনলাইনে ভিডিও কনফারেন্সের মাধ্যমে শুনানি পরিচালনা</p>
             </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-              <div className="text-orange-600 text-5xl mb-4">🌍</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">পাবলিক প্রেশার</h3>
-              <p className="text-gray-600">বিলম্বিত অভিযোগ পাবলিক করে দ্রুত সমাধান ত্বরান্বিত করুন</p>
+
+            {/* Service 4 - Trust Score */}
+            <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition transform hover:scale-105">
+              <div className="text-yellow-600 text-4xl mb-3">⭐</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">ট্রাস্ট স্কোর</h3>
+              <p className="text-sm text-gray-600">আপনার বিশ্বস্ততা স্কোর দেখুন এবং সুবিধা উপভোগ করুন</p>
             </div>
+
+            {/* Service 5 - Real-time Tracking */}
+            <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition transform hover:scale-105">
+              <div className="text-green-600 text-4xl mb-3">🔍</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">রিয়েল-টাইম ট্র্যাকিং</h3>
+              <p className="text-sm text-gray-600">অভিযোগের অবস্থা ও অগ্রগতি জানুন রিয়েল টাইমে</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Section */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl mt-16 p-8 text-white">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
+            <div>
+              <div className="text-3xl font-bold mb-2">১০০%</div>
+              <div className="text-blue-100 text-sm">গোপনীয়তা সুরক্ষিত</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold mb-2">২৪/৭</div>
+              <div className="text-blue-100 text-sm">অনলাইন শুনানি</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold mb-2">বিনামূল্যে</div>
+              <div className="text-blue-100 text-sm">অভিযোগ দাখিল</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold mb-2">স্বয়ংক্রিয়</div>
+              <div className="text-blue-100 text-sm">ট্রাস্ট স্কোর সিস্টেম</div>
+            </div>
+          </div>
+        </div>
+
+        {/* How It Works */}
+        <div className="max-w-6xl mx-auto mt-16">
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
+            কিভাবে কাজ করে?
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="text-center">
+              <div className="bg-red-100 text-red-600 w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3">
+                ১
+              </div>
+              <h3 className="font-semibold mb-1">অভিযোগ দাখিল</h3>
+              <p className="text-sm text-gray-600">নাম না জানিয়ে অভিযোগ করুন</p>
+            </div>
+            <div className="text-center">
+              <div className="bg-orange-100 text-orange-600 w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3">
+                ২
+              </div>
+              <h3 className="font-semibold mb-1">যাচাই ও তদন্ত</h3>
+              <p className="text-sm text-gray-600">কর্তৃপক্ষ অভিযোগ যাচাই করে</p>
+            </div>
+            <div className="text-center">
+              <div className="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3">
+                ৩
+              </div>
+              <h3 className="font-semibold mb-1">ডিজিটাল শুনানি</h3>
+              <p className="text-sm text-gray-600">প্রয়োজনে অনলাইন শুনানি</p>
+            </div>
+            <div className="text-center">
+              <div className="bg-green-100 text-green-600 w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3">
+                ৪
+              </div>
+              <h3 className="font-semibold mb-1">সমাধান ও রিপোর্ট</h3>
+              <p className="text-sm text-gray-600">চূড়ান্ত সিদ্ধান্ত ও নিষ্পত্তি</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Call to Action */}
+        <div className="bg-gradient-to-r from-red-600 to-orange-600 rounded-2xl mt-16 p-8 text-center text-white">
+          <h2 className="text-2xl font-bold mb-3">
+            আজই দুর্নীতি প্রতিরোধে অংশ নিন
+          </h2>
+          <p className="mb-6 opacity-90">
+            একটি স্বচ্ছ ও জবাবদিহিমূলক সেবা ব্যবস্থা গড়ে তুলতে আমাদের সাথে যোগ দিন
+          </p>
+          <div className="flex justify-center gap-4">
+            <Link 
+              to="/register" 
+              className="bg-white text-red-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
+            >
+              রেজিস্ট্রেশন করুন
+            </Link>
+            <Link 
+              to="/login" 
+              className="bg-transparent border-2 border-white text-white px-6 py-2 rounded-lg font-semibold hover:bg-white hover:text-red-600 transition"
+            >
+              লগইন করুন
+            </Link>
           </div>
         </div>
       </div>
@@ -308,7 +404,7 @@ function CitizenHomePage() {
               className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105"
             >
               <div className="text-orange-600 text-4xl mb-3">🌍</div>
-              <h3 className="text-lg font-bold mb-1">পাবলিক প্রেশার</h3>
+              <h3 className="text-lg font-bold mb-1">জনতার কণ্ঠ</h3>
               <p className="text-sm text-gray-600">বিলম্বিত অভিযোগ দেখুন ও সমর্থন দিন</p>
             </Link>
           </div>
@@ -345,7 +441,7 @@ function OfficerHomePage() {
             {user?.office_name && `অফিস: ${user.office_name}`}
           </p>
           <p className="text-lg text-gray-500 mb-4">
-            বিভাগ: {getDepartmentDisplay()}
+            
           </p>
           <p className="text-md text-gray-600 mb-8">
             আপনি শুধুমাত্র আপনার বিভাগের সাথে সম্পর্কিত অভিযোগ দেখতে পাবেন
@@ -362,7 +458,7 @@ function OfficerHomePage() {
               to="/public-pressure" 
               className="inline-block bg-orange-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-orange-700 transition"
             >
-              পাবলিক প্রেশার বোর্ড
+              জনতার কণ্ঠ বোর্ড
             </Link>
           </div>
         </div>
@@ -411,7 +507,7 @@ function AdminHomePage() {
               className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
             >
               <div className="text-orange-600 text-4xl mb-3">🌍</div>
-              <h3 className="text-lg font-bold mb-1">পাবলিক প্রেশার</h3>
+              <h3 className="text-lg font-bold mb-1">জনতার কণ্ঠ</h3>
               <p className="text-sm text-gray-600">পাবলিক অভিযোগ দেখুন</p>
             </Link>
           </div>
@@ -478,15 +574,11 @@ function AppContent() {
       <div>
         <Navbar />
         <Routes>
-          {/* Homepage */}
           <Route path="/" element={<HomePageRouter />} />
-          
-          {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-otp" element={<OTPVerificationPage />} />
           
-          {/* Citizen Routes */}
           <Route path="/complaint" element={
             <ProtectedRoute allowedRoles={['citizen']}>
               <ComplaintPage />
@@ -508,28 +600,24 @@ function AppContent() {
             </ProtectedRoute>
           } />
           
-          {/* Officer Routes */}
           <Route path="/dashboard" element={
             <ProtectedRoute allowedRoles={['officer', 'admin']}>
               <Dashboard />
             </ProtectedRoute>
           } />
           
-          {/* Admin Routes */}
           <Route path="/admin/approvals" element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminApprovalPage />
             </ProtectedRoute>
           } />
           
-          {/* Public Pressure Board - Accessible to all authenticated users */}
           <Route path="/public-pressure" element={
             <ProtectedRoute allowedRoles={['citizen', 'officer', 'admin']}>
               <PublicPressureBoard />
             </ProtectedRoute>
           } />
           
-          {/* Shared Routes */}
           <Route path="/profile" element={
             <ProtectedRoute allowedRoles={['citizen', 'officer', 'admin']}>
               <ProfilePage />
