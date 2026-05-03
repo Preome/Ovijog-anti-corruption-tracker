@@ -47,7 +47,6 @@ def complaint_to_dict(complaint):
         'reported_at': complaint.reported_at.isoformat() if complaint.reported_at else None,
         'updated_at': complaint.updated_at.isoformat() if hasattr(complaint, 'updated_at') and complaint.updated_at else None,
         'user_id': str(complaint.user.id) if complaint.user else None,
-        # Add these Public Pressure Mode fields
         'days_overdue': complaint.days_overdue(),
         'can_be_public': complaint.can_be_public(),
         'is_public': complaint.is_public,
@@ -55,6 +54,28 @@ def complaint_to_dict(complaint):
         'upvotes_count': complaint.upvotes_count,
         'days_remaining': complaint.days_remaining(),
     }
+
+
+# Root health check endpoint
+def health_check(request):
+    return JsonResponse({
+        'status': 'ok',
+        'message': 'Anti-Corruption Digital Service Tracker API is running',
+        'version': '1.0.0',
+        'environment': 'production',
+        'endpoints': {
+            'api_root': '/api/',
+            'admin_panel': '/admin/',
+            'auth': '/api/auth/',
+            'complaints': '/api/complaints/',
+            'hearings': '/api/hearings/',
+            'public_pressure': '/api/public-complaints/',
+            'notifications': '/api/notifications/',
+        },
+        'deployed_on': 'Render.com',
+        'documentation': 'https://github.com/Preome/Ovijog-anti-corruption-tracker'
+    })
+
 
 # Get all complaints (for officers - filtered by department)
 @csrf_exempt
@@ -202,7 +223,6 @@ def complaints_list(request):
             
             incident_date = datetime.fromisoformat(data.get('incident_date').replace('Z', '+00:00')) if data.get('incident_date') else datetime.now()
             
-            # ALWAYS link the user if logged in, regardless of is_anonymous
             complaint = Complaint.objects.create(
                 service_type=data.get('service_type'),
                 office_location=data.get('office_location'),
@@ -211,10 +231,10 @@ def complaints_list(request):
                 amount_requested=data.get('amount_requested') if data.get('amount_requested') else None,
                 officer_name=data.get('officer_name', ''),
                 evidence_documents=data.get('evidence_documents', []),
-                is_anonymous=data.get('is_anonymous', True),  # This only controls display to officers
+                is_anonymous=data.get('is_anonymous', True),
                 priority=data.get('priority', 'medium'),
                 status='pending',
-                user=user if user else None  # Always link user if logged in
+                user=user if user else None
             )
             
             return JsonResponse({
@@ -254,37 +274,30 @@ def update_complaint_status(request, complaint_id):
             
             # UPDATE TRUST SCORE based on complaint resolution
             if complaint.user and not complaint.is_anonymous:
-                # Update total complaints count
                 complaint.user.total_complaints = Complaint.objects.filter(user=complaint.user).count()
                 
-                # Points change based on new status
                 points_changed = 0
                 old_points = complaint.user.trust_score
                 
                 if new_status == 'verified' and old_status != 'verified':
-                    # Complaint verified - add 5 points
                     complaint.user.verified_complaints += 1
                     points_changed = 5
                     print(f"✅ +5 points for verified complaint")
                     
                 elif new_status == 'rejected' and old_status != 'rejected':
-                    # Complaint rejected - subtract 10 points
                     complaint.user.rejected_complaints += 1
                     points_changed = -10
                     print(f"⚠️ -10 points for rejected complaint")
                     
                 elif new_status == 'dismissed' and old_status != 'dismissed':
-                    # Fake complaint - subtract 15 points
                     complaint.user.rejected_complaints += 1
                     points_changed = -15
                     print(f"❌ -15 points for fake complaint")
                 
-                # Recalculate trust score
                 if points_changed != 0:
                     complaint.user.calculate_trust_score()
                     print(f"Trust score changed: {old_points} → {complaint.user.trust_score}")
                     
-                    # Create notification for citizen
                     if points_changed > 0:
                         Notification.objects.create(
                             user=complaint.user,
@@ -420,7 +433,6 @@ def complaint_stats(request):
 # Make complaint public
 @csrf_exempt
 def make_complaint_public(request, complaint_id):
-    from django.utils import timezone  # Add this import inside the function
     user = get_user_from_request(request)
     
     if not user:
@@ -446,7 +458,6 @@ def make_complaint_public(request, complaint_id):
         complaint.save()
         
         # Create notification for officers
-        from users.models import Notification, User
         officers = User.objects.filter(role='officer')
         for officer in officers:
             Notification.objects.create(
@@ -468,22 +479,20 @@ def make_complaint_public(request, complaint_id):
     except Exception as e:
         print(f"Error in make_complaint_public: {e}")
         return JsonResponse({'error': str(e)}, status=500)
-# Get public complaints (Public Pressure Board)
-# Get public complaints (Public Pressure Board)
+
+
 # Get public complaints (Public Pressure Board)
 @csrf_exempt
 def public_complaints(request):
     complaints = Complaint.objects.filter(is_public=True).order_by('-public_activated_at')
     complaints_data = []
     for c in complaints:
-        # For anonymous complaints, we can show a generic message
         if c.is_anonymous:
             reporter_trust_score = None
             reporter_trust_level = None
             reported_by = 'বেনামী (পরিচয় গোপন)'
             trust_badge = 'anonymous'
         else:
-            # Get trust score from user
             if c.user:
                 reporter_trust_score = getattr(c.user, 'trust_score', 50)
                 reporter_trust_level = getattr(c.user, 'trust_level', 'medium')
@@ -512,13 +521,13 @@ def public_complaints(request):
         })
     return JsonResponse(complaints_data, safe=False)
 
+
 # Upvote public complaint (public pressure)
 @csrf_exempt
 def upvote_public_complaint(request, complaint_id):
     try:
         complaint = Complaint.objects.get(complaint_id=complaint_id)
         
-        # Simple upvote system (you can implement more sophisticated)
         if not hasattr(complaint, 'upvotes_count'):
             complaint.upvotes_count = 0
         complaint.upvotes_count += 1
@@ -530,6 +539,8 @@ def upvote_public_complaint(request, complaint_id):
         })
     except Complaint.DoesNotExist:
         return JsonResponse({'error': 'Complaint not found'}, status=404)
+
+
 def api_home(request):
     return JsonResponse({
         'message': 'Anti-Corruption Digital Service Tracker API',
@@ -545,9 +556,16 @@ def api_home(request):
         }
     })
 
+
 # URL Patterns
 urlpatterns = [
+    # Root endpoint - Health check
+    path('', health_check, name='health_check'),
+    
+    # Admin
     path('admin/', admin.site.urls),
+    
+    # API
     path('api/', api_home),
     path('api/auth/', include('users.urls')),
     
@@ -566,13 +584,14 @@ urlpatterns = [
     path('api/complaints/<str:complaint_id>/update-status/', update_complaint_status),
     path('api/complaints/<str:complaint_id>/', complaint_detail),
     path('api/complaints/<str:complaint_id>/make-public/', make_complaint_public),
+    
+    # Public complaints (Pressure Board)
     path('api/public-complaints/', public_complaints),
     path('api/public-complaints/<str:complaint_id>/upvote/', upvote_public_complaint),
     
     # Dashboard stats
     path('api/dashboard/admin-stats/', admin_stats),
     
+    # Hearings
     path('api/hearings/', include(hearings_urls)),
-    
-    
 ]
