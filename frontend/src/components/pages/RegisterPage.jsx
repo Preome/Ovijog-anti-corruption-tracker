@@ -34,36 +34,16 @@ function RegisterPage() {
       console.log('Departments response:', response.data);
       
       let departmentsArray = [];
-      
-      // Handle paginated response (with results array)
       if (response.data && response.data.results && Array.isArray(response.data.results)) {
         departmentsArray = response.data.results;
-      } 
-      // Handle direct array response
-      else if (Array.isArray(response.data)) {
+      } else if (Array.isArray(response.data)) {
         departmentsArray = response.data;
       }
-      // Handle object response
-      else if (response.data && typeof response.data === 'object') {
-        departmentsArray = Object.values(response.data).filter(item => item && typeof item === 'object' && item.id);
-      }
       
-      console.log('Processed departments:', departmentsArray);
+      console.log('Departments array:', departmentsArray);
       setDepartments(departmentsArray);
-      
-      if (departmentsArray.length === 0) {
-        console.warn('No departments found');
-      }
     } catch (error) {
       console.error('Error fetching departments:', error);
-      toast.error('বিভাগের তালিকা লোড করতে ব্যর্থ হয়েছে');
-      // Fallback departments
-      setDepartments([
-        { id: 1, name_bn: 'পাসপোর্ট অধিদপ্তর' },
-        { id: 2, name_bn: 'বিআরটিএ - ড্রাইভিং লাইসেন্স' },
-        { id: 3, name_bn: 'জন্ম নিবন্ধন অধিদপ্তর' },
-        { id: 4, name_bn: 'কর অধিদপ্তর - ট্যাক্স আইডি' }
-      ]);
     } finally {
       setDepartmentsLoading(false);
     }
@@ -71,6 +51,7 @@ function RegisterPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    console.log(`Field changed: ${name} = ${value}`);
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -78,7 +59,9 @@ function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     
-    // Basic validation
+    console.log('Current form data:', formData);
+    
+    // Validation
     if (!formData.username.trim()) {
       toast.error('ইউজারনেম প্রয়োজন');
       setLoading(false);
@@ -139,11 +122,27 @@ function RegisterPage() {
     if (formData.office_name) submitData.office_name = formData.office_name;
     if (formData.designation) submitData.designation = formData.designation;
     
-    // Convert department to number for officer role
+    // Handle department - IMPORTANT: send only the ID as number
     if (formData.role === 'officer' && formData.department) {
-      const deptId = parseInt(formData.department, 10);
+      let deptId;
+      
+      // If department is an object (has id property), extract the id
+      if (typeof formData.department === 'object' && formData.department !== null) {
+        deptId = formData.department.id;
+      } else {
+        // If it's a string or number, parse it
+        deptId = parseInt(formData.department, 10);
+      }
+      
+      console.log('Department raw value:', formData.department);
+      console.log('Extracted department ID:', deptId);
+      
       if (!isNaN(deptId) && deptId > 0) {
         submitData.department = deptId;
+      } else {
+        toast.error('বৈধ বিভাগ নির্বাচন করুন');
+        setLoading(false);
+        return;
       }
     }
     
@@ -154,9 +153,7 @@ function RegisterPage() {
       console.log('Registration response:', response.data);
       
       if (response.data.success) {
-        // Store email for OTP verification
         localStorage.setItem('pending_verification_email', formData.email);
-        // Redirect to OTP verification page
         navigate('/verify-otp');
         toast.success('রেজিস্ট্রেশন সফল! আপনার ইমেইলে OTP পাঠানো হয়েছে');
       }
@@ -164,7 +161,6 @@ function RegisterPage() {
       console.error('Registration error:', error);
       if (error.response?.data) {
         const errors = error.response.data;
-        
         if (typeof errors === 'object') {
           Object.entries(errors).forEach(([key, value]) => {
             if (Array.isArray(value)) {
@@ -184,6 +180,14 @@ function RegisterPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
       <div className="container mx-auto px-4">
@@ -196,180 +200,65 @@ function RegisterPage() {
 
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Username */}
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2 font-semibold">
-                  ইউজারনেম *
-                </label>
-                <input 
-                  type="text" 
-                  name="username" 
-                  required 
-                  value={formData.username} 
-                  onChange={handleChange} 
-                  placeholder="ইউজারনেম দিন" 
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" 
-                />
-                <p className="text-xs text-gray-500 mt-1">ইউনিক ইউজারনেম (যেমন: john_doe)</p>
+                <label className="block text-gray-700 mb-2 font-semibold">ইউজারনেম *</label>
+                <input type="text" name="username" required value={formData.username} onChange={handleChange} placeholder="ইউজারনেম দিন" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" />
               </div>
 
-              {/* Full Name Bengali */}
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2 font-semibold">
-                  পূর্ণ নাম (বাংলা)
-                </label>
-                <input 
-                  type="text" 
-                  name="full_name_bn" 
-                  value={formData.full_name_bn} 
-                  onChange={handleChange} 
-                  placeholder="আপনার বাংলা নাম" 
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" 
-                />
+                <label className="block text-gray-700 mb-2 font-semibold">পূর্ণ নাম (বাংলা)</label>
+                <input type="text" name="full_name_bn" value={formData.full_name_bn} onChange={handleChange} placeholder="আপনার বাংলা নাম" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" />
               </div>
 
-              {/* Email */}
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2 font-semibold">
-                  ইমেইল *
-                </label>
-                <input 
-                  type="email" 
-                  name="email" 
-                  required 
-                  value={formData.email} 
-                  onChange={handleChange} 
-                  placeholder="youremail@example.com" 
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" 
-                />
-                <p className="text-xs text-gray-500 mt-1">ভেরিফিকেশন OTP এই ইমেইলে পাঠানো হবে</p>
+                <label className="block text-gray-700 mb-2 font-semibold">ইমেইল *</label>
+                <input type="email" name="email" required value={formData.email} onChange={handleChange} placeholder="youremail@example.com" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" />
               </div>
 
-              {/* Phone */}
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2 font-semibold">
-                  মোবাইল নম্বর
-                </label>
-                <input 
-                  type="tel" 
-                  name="phone" 
-                  value={formData.phone} 
-                  onChange={handleChange} 
-                  placeholder="017XXXXXXXX" 
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" 
-                />
-                <p className="text-xs text-gray-500 mt-1">বাংলাদেশি নম্বর (01XXXXXXXXX)</p>
+                <label className="block text-gray-700 mb-2 font-semibold">মোবাইল নম্বর</label>
+                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="017XXXXXXXX" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" />
               </div>
 
-              {/* NID */}
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2 font-semibold">
-                  এনআইডি নম্বর
-                </label>
-                <input 
-                  type="text" 
-                  name="nid" 
-                  value={formData.nid} 
-                  onChange={handleChange} 
-                  placeholder="10 বা 17 সংখ্যার এনআইডি" 
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" 
-                />
+                <label className="block text-gray-700 mb-2 font-semibold">এনআইডি নম্বর</label>
+                <input type="text" name="nid" value={formData.nid} onChange={handleChange} placeholder="10 বা 17 সংখ্যার এনআইডি" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" />
               </div>
 
-              {/* Role */}
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2 font-semibold">
-                  ভূমিকা *
-                </label>
-                <select 
-                  name="role" 
-                  value={formData.role} 
-                  onChange={handleChange} 
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600"
-                >
+                <label className="block text-gray-700 mb-2 font-semibold">ভূমিকা *</label>
+                <select name="role" value={formData.role} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600">
                   <option value="citizen">নাগরিক</option>
                   <option value="officer">সরকারি কর্মকর্তা</option>
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  {formData.role === 'officer' 
-                    ? 'কর্মকর্তা অ্যাকাউন্ট অ্যাডমিন এপ্রুভাল প্রয়োজন' 
-                    : 'নাগরিক অ্যাকাউন্ট ইমেইল ভেরিফিকেশনের পর সক্রিয় হবে'}
-                </p>
               </div>
 
-              {/* Password */}
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2 font-semibold">
-                  পাসওয়ার্ড *
-                </label>
-                <input 
-                  type="password" 
-                  name="password" 
-                  required 
-                  value={formData.password} 
-                  onChange={handleChange} 
-                  placeholder="পাসওয়ার্ড দিন" 
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" 
-                />
-                <p className="text-xs text-gray-500 mt-1">কমপক্ষে 6 অক্ষর</p>
+                <label className="block text-gray-700 mb-2 font-semibold">পাসওয়ার্ড *</label>
+                <input type="password" name="password" required value={formData.password} onChange={handleChange} placeholder="পাসওয়ার্ড দিন" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" />
               </div>
 
-              {/* Confirm Password */}
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2 font-semibold">
-                  পাসওয়ার্ড নিশ্চিত করুন *
-                </label>
-                <input 
-                  type="password" 
-                  name="password2" 
-                  required 
-                  value={formData.password2} 
-                  onChange={handleChange} 
-                  placeholder="পাসওয়ার্ড আবার দিন" 
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" 
-                />
+                <label className="block text-gray-700 mb-2 font-semibold">পাসওয়ার্ড নিশ্চিত করুন *</label>
+                <input type="password" name="password2" required value={formData.password2} onChange={handleChange} placeholder="পাসওয়ার্ড আবার দিন" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" />
               </div>
 
-              {/* Officer-specific fields */}
               {formData.role === 'officer' && (
                 <>
                   <div className="mb-4">
-                    <label className="block text-gray-700 mb-2 font-semibold">
-                      অফিসের নাম *
-                    </label>
-                    <input 
-                      type="text" 
-                      name="office_name" 
-                      value={formData.office_name} 
-                      onChange={handleChange} 
-                      placeholder="আপনার অফিসের নাম" 
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" 
-                    />
+                    <label className="block text-gray-700 mb-2 font-semibold">অফিসের নাম *</label>
+                    <input type="text" name="office_name" value={formData.office_name} onChange={handleChange} placeholder="আপনার অফিসের নাম" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" />
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-gray-700 mb-2 font-semibold">
-                      পদবি
-                    </label>
-                    <input 
-                      type="text" 
-                      name="designation" 
-                      value={formData.designation} 
-                      onChange={handleChange} 
-                      placeholder="আপনার পদবি" 
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" 
-                    />
+                    <label className="block text-gray-700 mb-2 font-semibold">পদবি</label>
+                    <input type="text" name="designation" value={formData.designation} onChange={handleChange} placeholder="আপনার পদবি" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-600" />
                   </div>
 
                   <div className="mb-4 col-span-2">
-                    <label className="block text-gray-700 mb-2 font-semibold">
-                      বিভাগ *
-                    </label>
+                    <label className="block text-gray-700 mb-2 font-semibold">বিভাগ *</label>
                     {departmentsLoading ? (
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                        <span>বিভাগ লোড হচ্ছে...</span>
-                      </div>
+                      <div className="text-gray-500">বিভাগ লোড হচ্ছে...</div>
                     ) : (
                       <select
                         name="department"
@@ -386,60 +275,12 @@ function RegisterPage() {
                         ))}
                       </select>
                     )}
-                    
-                    {!departmentsLoading && departments.length === 0 && (
-                      <p className="text-xs text-red-500 mt-1">
-                        কোনো বিভাগ পাওয়া যায়নি। দয়া করে অ্যাডমিনের সাথে যোগাযোগ করুন।
-                      </p>
-                    )}
-                    
-                    {!departmentsLoading && departments.length > 0 && (
-                      <p className="text-xs text-green-600 mt-1">
-                        ✓ {departments.length} টি বিভাগ উপলব্ধ
-                      </p>
-                    )}
                   </div>
                 </>
               )}
             </div>
 
-            {/* Info Box for Officers */}
-            {formData.role === 'officer' && (
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 mt-2">
-                <div className="flex">
-                  <AlertCircle className="h-5 w-5 text-yellow-400 mr-2" />
-                  <div>
-                    <p className="text-sm text-yellow-700 font-semibold">গুরুত্বপূর্ণ তথ্য:</p>
-                    <p className="text-sm text-yellow-700">
-                      কর্মকর্তা অ্যাকাউন্ট সক্রিয় করতে অ্যাডমিন এপ্রুভাল প্রয়োজন। 
-                      ইমেইল ভেরিফিকেশনের পর আপনার অ্যাকাউন্ট অ্যাপ্রুভালের জন্য অপেক্ষা করুন।
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Info Box for Citizens */}
-            {formData.role === 'citizen' && (
-              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 mt-2">
-                <div className="flex">
-                  <AlertCircle className="h-5 w-5 text-blue-400 mr-2" />
-                  <div>
-                    <p className="text-sm text-blue-700 font-semibold">গুরুত্বপূর্ণ তথ্য:</p>
-                    <p className="text-sm text-blue-700">
-                      রেজিস্ট্রেশনের পর আপনার ইমেইলে একটি OTP পাঠানো হবে। 
-                      ইমেইল ভেরিফিকেশনের পর আপনি লগইন করতে পারবেন।
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <button 
-              type="submit" 
-              disabled={loading} 
-              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-semibold"
-            >
+            <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-semibold">
               {loading ? 'প্রক্রিয়াধীন...' : 'রেজিস্ট্রেশন করুন'}
             </button>
           </form>

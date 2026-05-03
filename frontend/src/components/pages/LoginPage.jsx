@@ -46,7 +46,7 @@ function LoginPage() {
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="block text-gray-700 mb-2 font-semibold">
-                ইউজারনেম / ফোন / এনআইডি
+                ইউজারনেম 
               </label>
               <input
                 type="text"
