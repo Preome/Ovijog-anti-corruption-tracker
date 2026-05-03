@@ -252,12 +252,65 @@ def update_complaint_status(request, complaint_id):
             complaint.investigation_notes = data.get('investigation_notes', complaint.investigation_notes)
             complaint.action_taken = data.get('action_taken', complaint.action_taken)
             
+            # UPDATE TRUST SCORE based on complaint resolution
+            if complaint.user and not complaint.is_anonymous:
+                # Update total complaints count
+                complaint.user.total_complaints = Complaint.objects.filter(user=complaint.user).count()
+                
+                # Points change based on new status
+                points_changed = 0
+                old_points = complaint.user.trust_score
+                
+                if new_status == 'verified' and old_status != 'verified':
+                    # Complaint verified - add 5 points
+                    complaint.user.verified_complaints += 1
+                    points_changed = 5
+                    print(f"✅ +5 points for verified complaint")
+                    
+                elif new_status == 'rejected' and old_status != 'rejected':
+                    # Complaint rejected - subtract 10 points
+                    complaint.user.rejected_complaints += 1
+                    points_changed = -10
+                    print(f"⚠️ -10 points for rejected complaint")
+                    
+                elif new_status == 'dismissed' and old_status != 'dismissed':
+                    # Fake complaint - subtract 15 points
+                    complaint.user.rejected_complaints += 1
+                    points_changed = -15
+                    print(f"❌ -15 points for fake complaint")
+                
+                # Recalculate trust score
+                if points_changed != 0:
+                    complaint.user.calculate_trust_score()
+                    print(f"Trust score changed: {old_points} → {complaint.user.trust_score}")
+                    
+                    # Create notification for citizen
+                    if points_changed > 0:
+                        Notification.objects.create(
+                            user=complaint.user,
+                            notification_type='system',
+                            title='ট্রাস্ট স্কোর বেড়েছে! 🎉',
+                            message=f'আপনার অভিযোগ (ID: {complaint.complaint_id}) যাচাইকৃত হয়েছে। ট্রাস্ট স্কোর +{points_changed} পয়েন্ট বেড়েছে।',
+                            priority='medium',
+                            complaint_id=complaint.complaint_id
+                        )
+                    else:
+                        Notification.objects.create(
+                            user=complaint.user,
+                            notification_type='system',
+                            title='ট্রাস্ট স্কোর কমেছে ⚠️',
+                            message=f'আপনার অভিযোগ (ID: {complaint.complaint_id}) প্রত্যাখ্যাত হয়েছে। ট্রাস্ট স্কোর {points_changed} পয়েন্ট কমেছে। সতর্ক থাকুন।',
+                            priority='high',
+                            complaint_id=complaint.complaint_id
+                        )
+                
+                complaint.user.save()
+            
             feedback = data.get('feedback_to_citizen', '')
             if feedback:
                 complaint.feedback_to_citizen = feedback
                 
-                # Create notification for officer response
-                if complaint.user:
+                if complaint.user and not complaint.is_anonymous:
                     Notification.objects.create(
                         user=complaint.user,
                         notification_type='officer_response',
@@ -266,7 +319,6 @@ def update_complaint_status(request, complaint_id):
                         priority='medium',
                         complaint_id=complaint.complaint_id
                     )
-                    print(f"📧 Response notification sent to {complaint.user.username}")
             
             if new_status == 'verified':
                 complaint.resolution_date = datetime.now()
@@ -274,8 +326,7 @@ def update_complaint_status(request, complaint_id):
             complaint.save()
             
             # Create notification for status change
-            if old_status != new_status and complaint.user:
-                # Define status messages in Bengali
+            if old_status != new_status and complaint.user and not complaint.is_anonymous:
                 status_titles = {
                     'under_investigation': 'তদন্ত শুরু হয়েছে',
                     'verified': 'অভিযোগ যাচাই করা হয়েছে',
@@ -284,27 +335,17 @@ def update_complaint_status(request, complaint_id):
                     'escalated': 'অভিযোগ উর্ধ্বতন কর্তৃপক্ষে প্রেরিত'
                 }
                 
-                status_messages = {
-                    'under_investigation': f'আপনার অভিযোগ (ID: {complaint.complaint_id}) এর তদন্ত শুরু হয়েছে।',
-                    'verified': f'আপনার অভিযোগ (ID: {complaint.complaint_id}) যাচাই করা হয়েছে এবং সঠিক বলে প্রমাণিত হয়েছে।',
-                    'rejected': f'আপনার অভিযোগ (ID: {complaint.complaint_id}) পর্যাপ্ত প্রমাণের অভাবে প্রত্যাখ্যান করা হয়েছে।',
-                    'resolved': f'আপনার অভিযোগ (ID: {complaint.complaint_id}) নিষ্পত্তি করা হয়েছে। প্রয়োজনীয় ব্যবস্থা নেওয়া হয়েছে।',
-                    'escalated': f'আপনার অভিযোগ (ID: {complaint.complaint_id}) উর্ধ্বতন কর্তৃপক্ষে প্রেরণ করা হয়েছে।'
-                }
-                
                 title = status_titles.get(new_status, 'অভিযোগের অবস্থা পরিবর্তন')
-                message = status_messages.get(new_status, f'আপনার অভিযোগ (ID: {complaint.complaint_id}) এর অবস্থা "{new_status}" এ পরিবর্তিত হয়েছে।')
-                priority = 'high' if new_status in ['verified', 'resolved'] else 'medium'
+                message = f'আপনার অভিযোগ (ID: {complaint.complaint_id}) এর অবস্থা "{new_status}" এ পরিবর্তিত হয়েছে।'
                 
                 Notification.objects.create(
                     user=complaint.user,
                     notification_type='complaint_status',
                     title=title,
                     message=message,
-                    priority=priority,
+                    priority='medium' if new_status not in ['verified', 'resolved'] else 'high',
                     complaint_id=complaint.complaint_id
                 )
-                print(f"📧 Status notification sent to {complaint.user.username}: {old_status} -> {new_status}")
             
             return JsonResponse({
                 'success': True,
@@ -321,7 +362,7 @@ def update_complaint_status(request, complaint_id):
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
-
+    
 # Get complaint statistics
 @csrf_exempt
 def complaint_stats(request):
@@ -428,20 +469,46 @@ def make_complaint_public(request, complaint_id):
         print(f"Error in make_complaint_public: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 # Get public complaints (Public Pressure Board)
+# Get public complaints (Public Pressure Board)
+# Get public complaints (Public Pressure Board)
 @csrf_exempt
 def public_complaints(request):
     complaints = Complaint.objects.filter(is_public=True).order_by('-public_activated_at')
     complaints_data = []
     for c in complaints:
+        # For anonymous complaints, we can show a generic message
+        if c.is_anonymous:
+            reporter_trust_score = None
+            reporter_trust_level = None
+            reported_by = 'বেনামী (পরিচয় গোপন)'
+            trust_badge = 'anonymous'
+        else:
+            # Get trust score from user
+            if c.user:
+                reporter_trust_score = getattr(c.user, 'trust_score', 50)
+                reporter_trust_level = getattr(c.user, 'trust_level', 'medium')
+                reported_by = c.user.full_name_bn or c.user.username
+                trust_badge = reporter_trust_level
+            else:
+                reporter_trust_score = None
+                reporter_trust_level = None
+                reported_by = 'অজানা'
+                trust_badge = 'unknown'
+        
         complaints_data.append({
             'complaint_id': c.complaint_id,
             'office_location': c.office_location,
             'service_type': c.service_type,
-            'description': c.description[:200],  # Truncated for public view
+            'description': c.description[:200],
             'days_overdue': c.days_overdue(),
             'status': c.status,
             'public_activated_at': c.public_activated_at.isoformat() if c.public_activated_at else None,
-            'upvotes': getattr(c, 'upvotes_count', 0)
+            'upvotes': getattr(c, 'upvotes_count', 0),
+            'reporter_trust_score': reporter_trust_score,
+            'reporter_trust_level': reporter_trust_level,
+            'is_anonymous': c.is_anonymous,
+            'reported_by': reported_by,
+            'trust_badge': trust_badge
         })
     return JsonResponse(complaints_data, safe=False)
 

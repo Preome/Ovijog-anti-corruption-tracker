@@ -29,6 +29,8 @@ class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='citizen')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    trust_score = models.FloatField(default=0)
+    trust_level = models.CharField(max_length=20, default='medium')
     
     nid = models.CharField(
         max_length=20,
@@ -131,3 +133,43 @@ class Notification(models.Model):
         self.is_read = True
         self.read_at = timezone.now()
         self.save()
+        
+        
+        
+        
+# Add these fields to the User model
+trust_score = models.IntegerField(default=50)
+trust_level = models.CharField(max_length=20, default='medium') 
+total_complaints = models.IntegerField(default=0)
+verified_complaints = models.IntegerField(default=0)
+rejected_complaints = models.IntegerField(default=0)
+successful_applications = models.IntegerField(default=0)
+trust_level = models.CharField(max_length=20, default='medium')
+
+# Add method to calculate trust level
+def update_trust_level(self):
+    if self.trust_score >= 80:
+        self.trust_level = 'high'
+    elif self.trust_score >= 50:
+        self.trust_level = 'medium'
+    else:
+        self.trust_level = 'low'
+    self.save()
+
+def calculate_trust_score(self):
+    """Recalculate trust score based on history"""
+    score = 50  # Base score
+    
+    # Add points for verified complaints (max +30)
+    score += min(self.verified_complaints * 5, 30)
+    
+    # Add points for successful applications (max +20)
+    score += min(self.successful_applications * 3, 20)
+    
+    # Subtract for rejected/fake complaints
+    score -= self.rejected_complaints * 10
+    
+    # Ensure score stays between 0 and 100
+    self.trust_score = max(0, min(100, score))
+    self.update_trust_level()
+    self.save()

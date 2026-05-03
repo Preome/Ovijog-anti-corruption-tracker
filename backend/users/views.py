@@ -10,7 +10,7 @@ from django.db.models import Q
 from .models import User, Department, Notification
 from .serializers import (
     RegisterSerializer, LoginSerializer, UserSerializer, 
-    ChangePasswordSerializer, ApproveUserSerializer, DepartmentSerializer
+    ChangePasswordSerializer, ApproveUserSerializer, DepartmentSerializer,TrustScoreSerializer
 )
 import uuid
 import random
@@ -530,3 +530,20 @@ class DeleteNotificationView(generics.DestroyAPIView):
             return Response({'success': True, 'message': 'Notification deleted'})
         except Notification.DoesNotExist:
             return Response({'error': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        
+        
+
+class TrustScoreView(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = TrustScoreSerializer
+    
+    def get_object(self):
+        return self.request.user
+
+class TrustScoreLeaderboardView(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = TrustScoreSerializer
+    
+    def get_queryset(self):
+        return User.objects.filter(role='citizen', trust_score__gt=0).order_by('-trust_score')[:50]

@@ -26,6 +26,9 @@ urlpatterns = [
     # Departments
     path('departments/', views.DepartmentsView.as_view(), name='departments'),
     path('departments/<int:department_id>/officers/', views.DepartmentOfficersView.as_view(), name='department-officers'),
-
+    
+    
+    path('trust-score/', views.TrustScoreView.as_view(), name='trust-score'),
+    path('leaderboard/', views.TrustScoreLeaderboardView.as_view(), name='leaderboard'),
    
 ]

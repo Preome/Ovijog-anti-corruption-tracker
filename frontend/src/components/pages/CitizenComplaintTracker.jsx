@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import API from '../../services/api';
 import { 
   AlertTriangle, Eye, Clock, CheckCircle, XCircle, 
   Search, FileText, MapPin, Calendar, DollarSign,
   Image, File, ExternalLink, Flag, Filter, ListChecks,
-  ChevronDown, ChevronUp, Globe, ThumbsUp
+  ChevronDown, ChevronUp, Globe, ThumbsUp, Star, Shield
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -31,7 +31,6 @@ function CitizenComplaintTracker() {
   }, []);
 
   useEffect(() => {
-    // If there's a complaint ID in URL, scroll to it after complaints load
     if (complaintIdFromUrl && complaints.length > 0) {
       setTimeout(() => {
         const element = complaintRefs.current[complaintIdFromUrl];
@@ -53,7 +52,6 @@ function CitizenComplaintTracker() {
       const complaintsData = Array.isArray(response.data) ? response.data : [];
       setComplaints(complaintsData);
       
-      // Mark notifications as read when viewing complaints
       if (complaintsData.length > 0) {
         try {
           await API.post('/notifications/mark-all-read/');
@@ -76,7 +74,7 @@ function CitizenComplaintTracker() {
       const response = await API.post(`/complaints/${complaintId}/make-public/`);
       if (response.data.success) {
         toast.success('অভিযোগ পাবলিক করা হয়েছে!');
-        fetchMyComplaints(); // Refresh list
+        fetchMyComplaints();
       }
     } catch (error) {
       toast.error(error.response?.data?.error || 'পাবলিক করতে ব্যর্থ হয়েছে');
@@ -173,6 +171,12 @@ function CitizenComplaintTracker() {
     }
   };
 
+  const getTrustScoreColor = (score) => {
+    if (score >= 80) return 'text-green-600';
+    if (score >= 50) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
   const filteredComplaints = complaints.filter(complaint => {
     if (filterStatus !== 'all' && complaint.status !== filterStatus) return false;
     if (filterPriority !== 'all' && complaint.priority !== filterPriority) return false;
@@ -181,7 +185,6 @@ function CitizenComplaintTracker() {
     return true;
   });
 
-  // Statistics
   const stats = {
     total: complaints.length,
     pending: complaints.filter(c => c.status === 'pending' || c.status === 'under_investigation').length,
@@ -216,6 +219,49 @@ function CitizenComplaintTracker() {
           <p className="text-gray-600">
             আপনি যেসব অভিযোগ করেছেন সেগুলোর অবস্থা দেখুন
           </p>
+        </div>
+
+        {/* Trust Score Banner */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-md p-5 mb-8 border border-blue-200">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-100 rounded-full p-3">
+                <Shield className="h-8 w-8 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">আপনার ট্রাস্ট স্কোর</p>
+                <div className="flex items-center gap-2">
+                  <Star className={`h-5 w-5 ${getTrustScoreColor(user?.trust_score || 50)}`} />
+                  <span className={`text-2xl font-bold ${getTrustScoreColor(user?.trust_score || 50)}`}>
+                    {user?.trust_score || 50}
+                  </span>
+                  <span className="text-sm text-gray-500">/ ১০০</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex flex-col md:flex-row gap-3 md:gap-6">
+              <div className="text-center">
+                <p className="text-xs text-gray-500">যাচাইকৃত অভিযোগ</p>
+                <p className="text-lg font-semibold text-green-600">+৫ পয়েন্ট</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-500">প্রত্যাখ্যাত অভিযোগ</p>
+                <p className="text-lg font-semibold text-red-600">-১০ পয়েন্ট</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-500">মিথ্যা অভিযোগ</p>
+                <p className="text-lg font-semibold text-red-600">-১৫ পয়েন্ট</p>
+              </div>
+            </div>
+            
+            <Link 
+              to="/trust-score" 
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm whitespace-nowrap"
+            >
+              বিস্তারিত দেখুন →
+            </Link>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -422,7 +468,7 @@ function CitizenComplaintTracker() {
                 id={`complaint-${complaint.complaint_id}`}
                 className={`bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 ${complaint.is_public ? 'border-2 border-red-500' : ''}`}
               >
-                {/* Complaint Header - Clickable to expand/collapse */}
+                {/* Complaint Header */}
                 <div 
                   className={`px-6 py-4 border-b flex justify-between items-center flex-wrap gap-2 cursor-pointer transition ${
                     complaint.is_public ? 'bg-red-50 hover:bg-red-100' : 'bg-gray-50 hover:bg-gray-100'
@@ -457,7 +503,7 @@ function CitizenComplaintTracker() {
                   </div>
                 </div>
 
-                {/* Complaint Body - Expandable */}
+                {/* Complaint Body */}
                 {selectedComplaint === complaint.id && (
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -564,7 +610,7 @@ function CitizenComplaintTracker() {
                       </div>
                     )}
 
-                    {/* Investigation Notes (if available) */}
+                    {/* Investigation Notes */}
                     {complaint.investigation_notes && (
                       <div className="mt-4 bg-blue-50 rounded-lg p-4">
                         <p className="text-sm font-semibold text-blue-800 mb-1">তদন্ত নোট:</p>
@@ -572,7 +618,7 @@ function CitizenComplaintTracker() {
                       </div>
                     )}
 
-                    {/* Feedback (if available) */}
+                    {/* Feedback */}
                     {complaint.feedback_to_citizen && (
                       <div className="mt-3 bg-green-50 rounded-lg p-4">
                         <p className="text-sm font-semibold text-green-800 mb-1">কর্তৃপক্ষের বার্তা:</p>
@@ -580,7 +626,7 @@ function CitizenComplaintTracker() {
                       </div>
                     )}
 
-                    {/* Action Taken (if available) */}
+                    {/* Action Taken */}
                     {complaint.action_taken && (
                       <div className="mt-3 bg-purple-50 rounded-lg p-4">
                         <p className="text-sm font-semibold text-purple-800 mb-1">গৃহীত ব্যবস্থা:</p>

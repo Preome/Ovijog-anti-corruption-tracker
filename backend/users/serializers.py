@@ -147,3 +147,19 @@ class NotificationSerializer(serializers.ModelSerializer):
             return f"{minutes} মিনিট আগে"
         else:
             return "এখনই"
+        
+        
+        
+class TrustScoreSerializer(serializers.ModelSerializer):
+    trust_level = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'trust_score', 'trust_level']
+
+    def get_trust_level(self, obj):
+        if obj.trust_score > 80:
+            return "High"
+        elif obj.trust_score > 50:
+            return "Medium"
+        return "Low"

@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Shield, LayoutDashboard, AlertTriangle, LogOut, User, ListChecks, Users, CheckCircle, Globe, Video } from 'lucide-react';
+import { Shield, LayoutDashboard, AlertTriangle, LogOut, User, ListChecks, Users, CheckCircle, Globe, Video, Star } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ComplaintPage from './components/pages/ComplaintPage';
 import Dashboard from './components/pages/Dashboard';
@@ -13,6 +13,7 @@ import OTPVerificationPage from './components/pages/OTPVerificationPage';
 import NotificationBell from './components/NotificationBell';
 import PublicPressureBoard from './components/pages/PublicPressureBoard';
 import MyHearings from './components/pages/MyHearings';
+import TrustScore from './components/pages/TrustScore';
 
 // Role-Based Navigation Component
 function Navbar() {
@@ -24,6 +25,7 @@ function Navbar() {
     { path: '/complaint', label: 'অভিযোগ', icon: <AlertTriangle className="h-4 w-4" /> },
     { path: '/my-complaints', label: 'আমার অভিযোগ', icon: <ListChecks className="h-4 w-4" /> },
     { path: '/my-hearings', label: 'আমার শুনানি', icon: <Video className="h-4 w-4" /> },
+    { path: '/trust-score', label: 'ট্রাস্ট স্কোর', icon: <Star className="h-4 w-4" /> },
     { path: '/public-pressure', label: 'পাবলিক প্রেশার', icon: <Globe className="h-4 w-4" /> },
   ];
   
@@ -70,7 +72,7 @@ function Navbar() {
           <Link to="/" className="flex items-center space-x-2">
             <Shield className="h-8 w-8 text-blue-600" />
             <span className="text-xl font-bold text-gray-800 hidden sm:inline">
-              অভিযোগ
+              সততা ট্র্যাকার
             </span>
             <span className="text-sm font-bold text-gray-800 sm:hidden">
               ST
@@ -190,7 +192,7 @@ function MainHomePage() {
         <div className="text-center">
           <Shield className="h-24 w-24 text-blue-600 mx-auto mb-6 animate-pulse" />
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-            অভিযোগ
+            সততা ট্র্যাকার
           </h1>
           <p className="text-2xl text-blue-600 font-semibold mb-4">
             দুর্নীতিমুক্ত সেবা, স্বচ্ছ ভবিষ্যত
@@ -264,7 +266,7 @@ function CitizenHomePage() {
             দুর্নীতি রিপোর্টিং সিস্টেমে আপনাকে স্বাগতম
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 max-w-5xl mx-auto">
             <Link 
               to="/complaint" 
               className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105"
@@ -290,6 +292,15 @@ function CitizenHomePage() {
               <div className="text-blue-600 text-4xl mb-3">🎥</div>
               <h3 className="text-lg font-bold mb-1">আমার শুনানি</h3>
               <p className="text-sm text-gray-600">নির্ধারিত শুনানি দেখুন</p>
+            </Link>
+
+            <Link 
+              to="/trust-score" 
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:scale-105"
+            >
+              <div className="text-yellow-600 text-4xl mb-3">⭐</div>
+              <h3 className="text-lg font-bold mb-1">ট্রাস্ট স্কোর</h3>
+              <p className="text-sm text-gray-600">আপনার বিশ্বস্ততা স্কোর দেখুন</p>
             </Link>
 
             <Link 
@@ -489,6 +500,11 @@ function AppContent() {
           <Route path="/my-hearings" element={
             <ProtectedRoute allowedRoles={['citizen']}>
               <MyHearings />
+            </ProtectedRoute>
+          } />
+          <Route path="/trust-score" element={
+            <ProtectedRoute allowedRoles={['citizen']}>
+              <TrustScore />
             </ProtectedRoute>
           } />
           
