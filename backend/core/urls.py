@@ -9,6 +9,7 @@ from complaints.models import Complaint
 from users.models import User, Notification
 from users import views as users_views
 from django.utils import timezone
+from hearings import urls as hearings_urls
 
 
 # Helper function to get user from JWT token
@@ -503,4 +504,8 @@ urlpatterns = [
     
     # Dashboard stats
     path('api/dashboard/admin-stats/', admin_stats),
+    
+    path('api/hearings/', include(hearings_urls)),
+    
+    
 ]

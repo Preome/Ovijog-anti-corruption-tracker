@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'complaints',
     'dashboard',
     'audit',
+    'hearings',
 ]
 
 # Custom user model

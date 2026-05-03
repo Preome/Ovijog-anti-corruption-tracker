@@ -4,16 +4,18 @@ import API from '../../services/api';
 import { 
   FileText, AlertTriangle, Clock, CheckCircle, Eye, 
   Filter, Download, TrendingUp, Flag, Image, File,
-  Search, X, ChevronDown, Shield, Building
+  Search, X, ChevronDown, Shield, Building, Calendar, Video
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ComplaintManagement from './ComplaintManagement';
+import HearingSchedule from './HearingSchedule';
 
 function OfficerDashboard() {
   const { user } = useAuth();
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [showHearingSchedule, setShowHearingSchedule] = useState(null);
   const [showStats, setShowStats] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
@@ -366,6 +368,7 @@ function OfficerDashboard() {
                   <option value="pending">বিবেচনাধীন</option>
                   <option value="under_investigation">তদন্তাধীন</option>
                   <option value="verified">যাচাইকৃত</option>
+                  <option value="escalated">উর্ধ্বতন কর্তৃপক্ষে প্রেরিত</option>
                   <option value="resolved">নিষ্পত্তি হয়েছে</option>
                 </select>
                 
@@ -458,13 +461,25 @@ function OfficerDashboard() {
                         </div>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleComplaintClick(complaint)}
-                      className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition text-sm ml-4"
-                    >
-                      <Eye className="h-4 w-4" />
-                      বিস্তারিত
-                    </button>
+                    <div className="flex flex-col gap-2">
+                      {/* Schedule Hearing Button - Only for escalated complaints */}
+                      {complaint.status === 'escalated' && (
+                        <button
+                          onClick={() => setShowHearingSchedule(complaint)}
+                          className="flex items-center gap-1 bg-purple-600 text-white px-3 py-1 rounded-lg hover:bg-purple-700 transition text-sm"
+                        >
+                          <Calendar className="h-4 w-4" />
+                          শুনানি নির্ধারণ করুন
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleComplaintClick(complaint)}
+                        className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition text-sm"
+                      >
+                        <Eye className="h-4 w-4" />
+                        বিস্তারিত
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -479,6 +494,15 @@ function OfficerDashboard() {
           complaint={selectedComplaint}
           onClose={() => setSelectedComplaint(null)}
           onUpdate={fetchData}
+        />
+      )}
+
+      {/* Hearing Schedule Modal */}
+      {showHearingSchedule && (
+        <HearingSchedule
+          complaint={showHearingSchedule}
+          onClose={() => setShowHearingSchedule(null)}
+          onSuccess={fetchData}
         />
       )}
     </div>
