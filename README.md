@@ -5,9 +5,18 @@
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-38B2AC.svg)](https://tailwindcss.com/)
 
+
+
 A comprehensive digital platform to reduce bribery and increase transparency in public services through real-time complaint tracking, anonymous reporting, and public accountability mechanisms.
 
+## 🚀 Live Demo
+
+[![Frontend](https://img.shields.io/badge/Frontend-Live-brightgreen)](https://ovijog-anti-corruption-tracker.onrender.com)
+[![Backend API](https://img.shields.io/badge/Backend_API-Live-blue)](https://ovijog-anti-corruption-tracker-backend.onrender.com)
+
 ## 🌟 Key Features
+
+
 
 ### 🔐 User Management & Authentication
 - **Role-Based Access**: Citizen, Officer of 4 departments including passport office,BRTA office, Tax office and Birth Registration office , and Admin roles with different permissions
