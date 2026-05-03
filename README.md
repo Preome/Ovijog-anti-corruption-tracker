@@ -11,8 +11,8 @@ A comprehensive digital platform to reduce bribery and increase transparency in 
 
 ## 🚀 Live Demo
 
-[![Frontend](https://img.shields.io/badge/Frontend-Live-brightgreen)](https://ovijog-anti-corruption-tracker.onrender.com)
-[![Backend API](https://img.shields.io/badge/Backend_API-Live-blue)](https://ovijog-anti-corruption-tracker-backend.onrender.com)
+**Frontend:** https://ovijog-anti-corruption-tracker.onrender.com  
+**Backend API:** https://ovijog-anti-corruption-tracker-backend.onrender.com
 
 ## 🌟 Key Features
 
