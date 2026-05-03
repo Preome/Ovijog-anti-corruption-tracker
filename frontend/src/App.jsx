@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Shield, LayoutDashboard, AlertTriangle, LogOut, User, ListChecks, Users, CheckCircle, Globe, Video, Star } from 'lucide-react';
+import { Shield, LayoutDashboard, AlertTriangle, LogOut, User, ListChecks, Users, CheckCircle, Globe, Video, Star, Calendar } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ComplaintPage from './components/pages/ComplaintPage';
 import Dashboard from './components/pages/Dashboard';
@@ -14,6 +14,7 @@ import NotificationBell from './components/NotificationBell';
 import PublicPressureBoard from './components/pages/PublicPressureBoard';
 import MyHearings from './components/pages/MyHearings';
 import TrustScore from './components/pages/TrustScore';
+import OfficerHearings from './components/pages/OfficerHearings';
 
 // Role-Based Navigation Component
 function Navbar() {
@@ -33,6 +34,7 @@ function Navbar() {
   const officerNavItems = [
     { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
     { path: '/dashboard', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard className="h-4 w-4" /> },
+    { path: '/officer-hearings', label: 'আমার শুনানি', icon: <Calendar className="h-4 w-4" /> },
     { path: '/public-pressure', label: 'জনতার কণ্ঠ', icon: <Globe className="h-4 w-4" /> },
   ];
   
@@ -46,9 +48,9 @@ function Navbar() {
   
   const getNavItems = () => {
     if (!isAuthenticated) {
+      // Only show Home for non-authenticated users
       return [
         { path: '/', label: 'হোম', icon: <Shield className="h-4 w-4" /> },
-        { path: '/public-pressure', label: 'জনতার কণ্ঠ', icon: <Globe className="h-4 w-4" /> },
       ];
     }
     
@@ -221,35 +223,30 @@ function MainHomePage() {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-            {/* Service 1 - Anonymous Complaint */}
             <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition transform hover:scale-105">
               <div className="text-red-600 text-4xl mb-3">⚠️</div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">গোপন অভিযোগ</h3>
               <p className="text-sm text-gray-600">নাম না জানিয়ে দুর্নীতির অভিযোগ জানান। আপনার পরিচয় সম্পূর্ণ গোপন থাকবে।</p>
             </div>
 
-            {/* Service 2 - Public Pressure Board */}
             <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition transform hover:scale-105">
               <div className="text-orange-600 text-4xl mb-3">🌍</div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">জনতার কণ্ঠ</h3>
               <p className="text-sm text-gray-600">বিলম্বিত অভিযোগ পাবলিক করে দ্রুত সমাধান ত্বরান্বিত করুন</p>
             </div>
 
-            {/* Service 3 - Digital Hearing */}
             <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition transform hover:scale-105">
               <div className="text-blue-600 text-4xl mb-3">🎥</div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">ডিজিটাল শুনানি</h3>
               <p className="text-sm text-gray-600">অনলাইনে ভিডিও কনফারেন্সের মাধ্যমে শুনানি পরিচালনা</p>
             </div>
 
-            {/* Service 4 - Trust Score */}
             <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition transform hover:scale-105">
               <div className="text-yellow-600 text-4xl mb-3">⭐</div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">ট্রাস্ট স্কোর</h3>
               <p className="text-sm text-gray-600">আপনার বিশ্বস্ততা স্কোর দেখুন এবং সুবিধা উপভোগ করুন</p>
             </div>
 
-            {/* Service 5 - Real-time Tracking */}
             <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition transform hover:scale-105">
               <div className="text-green-600 text-4xl mb-3">🔍</div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">রিয়েল-টাইম ট্র্যাকিং</h3>
@@ -258,7 +255,6 @@ function MainHomePage() {
           </div>
         </div>
 
-        {/* Stats Section */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl mt-16 p-8 text-white">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
             <div>
@@ -280,7 +276,6 @@ function MainHomePage() {
           </div>
         </div>
 
-        {/* How It Works */}
         <div className="max-w-6xl mx-auto mt-16">
           <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
             কিভাবে কাজ করে?
@@ -318,7 +313,6 @@ function MainHomePage() {
           </div>
         </div>
 
-        {/* Call to Action */}
         <div className="bg-gradient-to-r from-red-600 to-orange-600 rounded-2xl mt-16 p-8 text-center text-white">
           <h2 className="text-2xl font-bold mb-3">
             আজই দুর্নীতি প্রতিরোধে অংশ নিন
@@ -447,12 +441,18 @@ function OfficerHomePage() {
             আপনি শুধুমাত্র আপনার বিভাগের সাথে সম্পর্কিত অভিযোগ দেখতে পাবেন
           </p>
           
-          <div className="flex justify-center gap-4">
+          <div className="flex justify-center gap-4 flex-wrap">
             <Link 
               to="/dashboard" 
               className="inline-block bg-purple-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-purple-700 transition"
             >
               কর্মকর্তা ড্যাশবোর্ডে যান
+            </Link>
+            <Link 
+              to="/officer-hearings" 
+              className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition"
+            >
+              আমার শুনানি
             </Link>
             <Link 
               to="/public-pressure" 
@@ -603,6 +603,11 @@ function AppContent() {
           <Route path="/dashboard" element={
             <ProtectedRoute allowedRoles={['officer', 'admin']}>
               <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/officer-hearings" element={
+            <ProtectedRoute allowedRoles={['officer', 'admin']}>
+              <OfficerHearings />
             </ProtectedRoute>
           } />
           
