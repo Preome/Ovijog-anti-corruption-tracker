@@ -19,7 +19,6 @@ function MyHearings() {
       const response = await API.get('/hearings/my-hearings/');
       console.log('API Response:', response.data);
       
-      // Handle paginated response (with results array)
       let hearingsData = [];
       if (response.data && response.data.results && Array.isArray(response.data.results)) {
         hearingsData = response.data.results;
@@ -87,14 +86,6 @@ function MyHearings() {
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  const joinMeeting = (meetingLink) => {
-    if (meetingLink) {
-      window.open(meetingLink, '_blank');
-    } else {
-      toast.error('মিটিং লিংক পাওয়া যায়নি');
-    }
   };
 
   if (loading) {
@@ -187,25 +178,17 @@ function MyHearings() {
                     </div>
                   )}
 
-                  {/* Join Button */}
-                  {hearing.status === 'scheduled' && hearing.meeting_link && (
-                    <button
-                      onClick={() => joinMeeting(hearing.meeting_link)}
-                      className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      শুনানিতে যোগ দিন
-                    </button>
+                  {/* Status Message Only - No Join Button */}
+                  {hearing.status === 'scheduled' && (
+                    <div className="text-center text-blue-600 text-sm">
+                      শুনানি নির্ধারিত রয়েছে
+                    </div>
                   )}
 
-                  {hearing.status === 'ongoing' && hearing.meeting_link && (
-                    <button
-                      onClick={() => joinMeeting(hearing.meeting_link)}
-                      className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2 animate-pulse"
-                    >
-                      <Video className="h-4 w-4" />
-                      এখনই যোগ দিন (চলমান)
-                    </button>
+                  {hearing.status === 'ongoing' && (
+                    <div className="text-center text-green-600 text-sm animate-pulse">
+                      শুনানি চলমান
+                    </div>
                   )}
 
                   {hearing.status === 'completed' && (

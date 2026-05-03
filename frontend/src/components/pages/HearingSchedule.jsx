@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import API from '../../services/api';
-import { Calendar, Video, Phone, MessageCircle, X } from 'lucide-react';
+import { Calendar, Video, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 function HearingSchedule({ complaint, onClose, onSuccess }) {
@@ -53,30 +53,14 @@ function HearingSchedule({ complaint, onClose, onSuccess }) {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-gray-700 mb-2 font-semibold">শুনানির ধরন</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, meeting_type: 'video' })}
                 className={`p-3 rounded-lg border-2 flex flex-col items-center gap-1 ${formData.meeting_type === 'video' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}
               >
                 <Video className="h-5 w-5" />
-                <span className="text-xs">ভিডিও</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, meeting_type: 'audio' })}
-                className={`p-3 rounded-lg border-2 flex flex-col items-center gap-1 ${formData.meeting_type === 'audio' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}
-              >
-                <Phone className="h-5 w-5" />
-                <span className="text-xs">অডিও</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, meeting_type: 'chat' })}
-                className={`p-3 rounded-lg border-2 flex flex-col items-center gap-1 ${formData.meeting_type === 'chat' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}
-              >
-                <MessageCircle className="h-5 w-5" />
-                <span className="text-xs">চ্যাট</span>
+                <span className="text-xs">ভিডিও কনফারেন্স</span>
               </button>
             </div>
           </div>
@@ -110,7 +94,7 @@ function HearingSchedule({ complaint, onClose, onSuccess }) {
           </div>
 
           <div className="mb-6">
-            <label className="block text-gray-700 mb-2 font-semibold">নোট (ঐচ্ছিক)</label>
+            <label className="block text-gray-700 mb-2 font-semibold">ভিডিও লিংক ও নোট</label>
             <textarea
               name="notes"
               rows="3"
