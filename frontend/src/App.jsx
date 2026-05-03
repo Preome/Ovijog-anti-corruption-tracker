@@ -72,7 +72,7 @@ function Navbar() {
           <Link to="/" className="flex items-center space-x-2">
             <Shield className="h-8 w-8 text-blue-600" />
             <span className="text-xl font-bold text-gray-800 hidden sm:inline">
-              সততা ট্র্যাকার
+              অভিযোগ
             </span>
             <span className="text-sm font-bold text-gray-800 sm:hidden">
               ST
@@ -192,7 +192,7 @@ function MainHomePage() {
         <div className="text-center">
           <Shield className="h-24 w-24 text-blue-600 mx-auto mb-6 animate-pulse" />
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-            সততা ট্র্যাকার
+            অভিযোগ
           </h1>
           <p className="text-2xl text-blue-600 font-semibold mb-4">
             দুর্নীতিমুক্ত সেবা, স্বচ্ছ ভবিষ্যত
