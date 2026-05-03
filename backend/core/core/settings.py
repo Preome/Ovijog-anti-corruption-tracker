@@ -25,7 +25,13 @@ SECRET_KEY = 'django-insecure-r-445y_)hx@rdy_7my4%p$l)8w3*^qr^1=#8)1os-csrlw41o2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '.onrender.com',  # Allows any subdomain of onrender.com
+    'ovijog-anti-corruption-tracker-backend.onrender.com',  # Your exact URL
+    'your-app-name.onrender.com',  # Add your actual app name
+]
 
 
 # Application definition
