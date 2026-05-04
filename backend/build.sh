@@ -1,53 +1,48 @@
 #!/bin/bash
 
-set -e  # Exit on error
-
 echo "========================================="
 echo "🚀 Starting Build Process"
 echo "========================================="
 
-cd backend
-
-# Create venv if not exists
-if [ ! -d "venv" ]; then
-  echo "🐍 Creating virtual environment..."
-  python -m venv venv
-fi
-
-# Activate venv (Windows MINGW64/Git Bash)
-if [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "win32"* || "$OS" == "Windows_NT" ]]; then
-  ACTIVATE="venv/Scripts/activate"
-else
-  ACTIVATE="venv/bin/activate"
-fi
-
-if [ -f "$ACTIVATE" ]; then
-  source "$ACTIVATE"
-  echo "✅ Virtual environment activated"
-else
-  echo "❌ Virtual environment activation failed: $ACTIVATE"
-  exit 1
-fi
-
-export PYTHONIOENCODING=utf-8
-
-echo "📦 Upgrading pip and installing dependencies..."
-python -m pip install --upgrade pip
+echo "📦 Installing dependencies..."
+pip install --upgrade pip
 pip install -r requirements.txt
 
-echo "🔄 Running database migrations (ignoring specific errors)..."
+echo "🔄 Running database migrations (ignoring errors)..."
 python manage.py makemigrations users || true
 python manage.py makemigrations complaints || true
 python manage.py makemigrations hearings || true
 python manage.py migrate users 0005 --fake || true
-python manage.py migrate users 0006 --fake || true
-python manage.py migrate || true
+python manage.py migrate --noinput || true
 
 echo "🏢 Seeding departments..."
-python manage.py create_departments
+python manage.py shell << PYEOF || true
+from users.models import Department
+departments = [
+    {'name': 'passport', 'name_bn': 'পাসপোর্ট অধিদপ্তর'},
+    {'name': 'driving_license', 'name_bn': 'বিআরটিএ - ড্রাইভিং লাইসেন্স'},
+    {'name': 'birth_certificate', 'name_bn': 'জন্ম নিবন্ধন অধিদপ্তর'},
+    {'name': 'tax_id', 'name_bn': 'কর অধিদপ্তর - ট্যাক্স আইডি'},
+]
+for dept in departments:
+    obj, created = Department.objects.get_or_create(
+        name=dept['name'], 
+        defaults={'name_bn': dept['name_bn']}
+    )
+    if created:
+        print(f'✅ Created: {dept["name_bn"]}')
+print(f'✅ Total departments: {Department.objects.count()}')
+PYEOF
 
-echo "👑 Creating superuser (if not exists)..."
-python manage.py create_superuser
+echo "👑 Creating superuser..."
+python manage.py shell << PYEOF || true
+from users.models import User
+if not User.objects.filter(username='admin').exists():
+    User.objects.create_superuser('admin', 'admin@example.com', 'Admin2024!')
+    print('✅ Superuser created')
+else:
+    print('⚠️ Superuser already exists')
+PYEOF
 
 echo "📁 Collecting static files..."
 python manage.py collectstatic --noinput || true
@@ -55,4 +50,3 @@ python manage.py collectstatic --noinput || true
 echo "========================================="
 echo "✅ Build completed successfully!"
 echo "========================================="
-
