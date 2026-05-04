@@ -4,7 +4,7 @@ from .models import User, Department, UserProfile
 
 class CustomUserAdmin(UserAdmin):
     # Remove 'trust_level' and any other problematic fields from list_display
-    list_display = ('username', 'email', 'role', 'status', 'office_name', 'created_at')
+    list_display = ('username', 'email', 'role', 'status', 'is_active', 'date_joined')
     list_filter = ('role', 'status', 'is_active', 'created_at')
     search_fields = ('username', 'email', 'office_name', 'phone', 'nid')
     

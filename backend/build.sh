@@ -12,6 +12,7 @@ echo "🔄 Running database migrations (ignoring errors)..."
 python manage.py makemigrations users || true
 python manage.py makemigrations complaints || true
 python manage.py makemigrations hearings || true
+python manage.py migrate users 0005 --fake || true
 python manage.py migrate --noinput || true
 
 echo "🏢 Seeding departments..."
