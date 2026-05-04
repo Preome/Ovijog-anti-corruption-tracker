@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
+import logging
 
 load_dotenv()
 
@@ -117,6 +118,11 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': False,
         },
+        'core': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
     },
 }
 
@@ -154,7 +160,13 @@ EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', f'noreply@{ALLOWED_HOSTS[0] if ALLOWED_HOSTS else "localhost"}')
+
+logger = logging.getLogger(__name__)
+if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
+    logger.warning("Email configuration incomplete - OTP emails will fail. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD.")
 
 # File upload
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10240
 FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800
+
