@@ -48,10 +48,29 @@ class RegisterView(generics.CreateAPIView):
             user.save()
             print(f"✅ OTP generated: {otp}")
             
-# Send OTP via Celery (async)
-            from .tasks import send_otp_email
-            send_otp_email.delay(user.id, otp)
-            print(f"✅ OTP {otp} queued for async email to {user.email}")
+            # Send OTP via email
+            try:
+                send_mail(
+                    subject='Your OTP for Email Verification - Anti-Corruption Tracker',
+                    message=f"""
+Welcome to Anti-Corruption Tracker!
+
+Your OTP for email verification is: {otp}
+
+This OTP is valid for 10 minutes.
+
+Please enter this OTP in the app to verify your email address.
+
+Best regards,
+Anti-Corruption Tracker Team
+""",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+                print(f"✅ OTP email sent to {user.email}")
+            except Exception as e:
+                print(f"❌ Failed to send email: {e}")
             
             return Response({
                 'success': True,
@@ -85,14 +104,35 @@ class SendOTPView(generics.GenericAPIView):
             user.otp_attempts = 0
             user.save()
             
-# Send OTP via Celery (async)
-            from .tasks import send_otp_email
-            send_otp_email.delay(user.id, otp)
-            return Response({
-                'success': True,
-                'message': 'OTP sent successfully (async)',
-                'email': email
-            })
+            # Send OTP via email
+            try:
+                send_mail(
+                    subject='Your OTP for Email Verification - Anti-Corruption Tracker',
+                    message=f"""
+Your OTP for email verification is: {otp}
+
+This OTP is valid for 10 minutes.
+
+If you didn't request this, please ignore this email.
+
+Best regards,
+Anti-Corruption Tracker Team
+""",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+                return Response({
+                    'success': True,
+                    'message': 'OTP sent successfully',
+                    'email': email
+                })
+            except Exception as e:
+                print(f"Failed to send OTP email: {e}")
+                return Response({
+                    'success': False,
+                    'message': 'Failed to send OTP. Please try again.'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
         except User.DoesNotExist:
             return Response({
@@ -193,9 +233,21 @@ class ResendOTPView(generics.GenericAPIView):
             user.otp_attempts = 0
             user.save()
             
-# Send OTP via Celery (async)
-            from .tasks import send_otp_email
-            send_otp_email.delay(user.id, otp)
+            # Send OTP via email
+            send_mail(
+                subject='Your New OTP - Anti-Corruption Tracker',
+                message=f"""
+Your new OTP for email verification is: {otp}
+
+This OTP is valid for 10 minutes.
+
+Best regards,
+Anti-Corruption Tracker Team
+""",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
             
             return Response({
                 'success': True,
