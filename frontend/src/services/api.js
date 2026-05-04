@@ -7,7 +7,7 @@ const API = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 60000, // Increased for production cold starts
 });
 
 // Add token to every request
