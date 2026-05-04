@@ -83,8 +83,6 @@ final_score = max(0, min(100, base_score + verified_bonus - rejected_penalty - f
 
 ### 4. Digital Hearings
 - **Scheduling**: Officers can schedule video hearings via UI
-- **Meeting Links**: Automatic Jitsi Meet URL generation
-- **Status Tracking**: `scheduled → ongoing → completed`
 - **Notifications**: Citizens receive hearing notifications
 
 ### 5. Real-time Notifications
